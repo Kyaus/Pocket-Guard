@@ -14,9 +14,13 @@ test('登录后进入主页面，点击守护小镇入口进入关卡选择', ()
   const guardian = homeButtonLayout(844).find(button => button.id === 'guardian' && button.featured);
   game.touch(guardian.x + guardian.width / 2, guardian.y + guardian.height / 2);
   assert.equal(game.state, 'levelSelect');
+  game.touch(195, game.h - 40);
+  assert.equal(game.state, 'levelSelect');
   game.touch(100, 150);
   assert.equal(game.state, 'ready');
   assert.equal(game.level, 1);
+  game.touch(30, 50);
+  assert.equal(game.state, 'levelSelect');
 });
 
 test('每关有独立地图和递增难度，地图提供更多可建造位置', () => {

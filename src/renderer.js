@@ -306,6 +306,89 @@ function drawTownScene(ctx, game) {
   ctx.restore();
 }
 
+function drawMiniMap(ctx, level, x, y, width, height, locked) {
+  panel(ctx, x + 2, y + 3, width, height, UI.woodDark, 9, null);
+  panel(ctx, x, y, width, height, locked ? '#3a4545' : '#47715a', 9, '#91714c');
+  if (!locked) {
+    const cellW = width / (GRID.cols + 1);
+    const cellH = height / (GRID.rows + 1);
+    const points = level.roadCells.map(([col, row]) => [
+      x + (col + 1) * cellW,
+      y + (row + 1) * cellH
+    ]);
+    ctx.save();
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    points.forEach(([px, py], index) => index === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py));
+    ctx.strokeStyle = '#745f4a';
+    ctx.lineWidth = Math.max(8, width * 0.16);
+    ctx.stroke();
+    ctx.strokeStyle = '#e7c985';
+    ctx.lineWidth = Math.max(4, width * 0.085);
+    ctx.stroke();
+    ctx.restore();
+    circle(ctx, points[0][0], points[0][1], 4, '#d77d66');
+    circle(ctx, points[points.length - 1][0], points[points.length - 1][1], 4, '#77c28c');
+  } else {
+    circle(ctx, x + width / 2, y + height / 2, 13, '#64706b');
+    label(ctx, '锁', x + width / 2, y + height / 2 + 6, 14, '#d0d3bd');
+  }
+}
+
+function drawLevelCard(ctx, level, x, y, width, height, locked) {
+  uiPanel(ctx, x, y, width, height, locked ? '#303b40' : UI.panel, 16);
+  drawMiniMap(ctx, level, x + 9, y + 11, 55, 86, locked);
+  label(ctx, level.name, x + 74, y + 27, 15, locked ? '#8c9690' : UI.text, 'left');
+  label(ctx, level.subtitle.split('·')[0], x + 74, y + 47, 10, locked ? '#718078' : UI.muted, 'left');
+  label(ctx, `${level.waves} 波`, x + 74, y + 69, 12, locked ? '#718078' : UI.gold, 'left');
+  label(ctx, locked ? '完成前关卡解锁' : '可挑战', x + 74, y + 88, 10,
+    locked ? '#718078' : '#9bd19b', 'left');
+}
+
+function drawLevelMapPreview(ctx, level, x, y, width, height) {
+  uiPanel(ctx, x, y, width, height, '#2b5147', 20);
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(x + 2, y + 2, width - 4, height - 4);
+  ctx.clip();
+  const terrain = ctx.createLinearGradient(0, y, 0, y + height);
+  terrain.addColorStop(0, level.color);
+  terrain.addColorStop(1, '#47745b');
+  ctx.fillStyle = terrain;
+  ctx.fillRect(x, y, width, height);
+  for (let i = 0; i < 8; i++) {
+    drawTree(ctx, x + 24 + (i * 57) % (width - 40), y + 92 + (i * 41) % Math.max(80, height - 100),
+      0.34 + (i % 3) * 0.06, i % 2 ? '#2d5a4b' : '#396b51');
+  }
+  const points = level.roadCells.map(([col, row]) => [
+    x + 28 + (col / (GRID.cols - 1)) * (width - 56),
+    y + 45 + (row / (GRID.rows - 1)) * (height - 70)
+  ]);
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.beginPath();
+  points.forEach(([px, py], index) => index === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py));
+  ctx.strokeStyle = '#806346';
+  ctx.lineWidth = 24;
+  ctx.stroke();
+  ctx.strokeStyle = '#e9ca87';
+  ctx.lineWidth = 17;
+  ctx.stroke();
+  circle(ctx, points[0][0], points[0][1], 10, '#c66e61');
+  circle(ctx, points[points.length - 1][0], points[points.length - 1][1], 11, '#6dbf8b');
+  for (let i = 2; i < points.length - 2; i += Math.max(5, Math.floor(points.length / 5))) {
+    circle(ctx, points[i][0] + 9, points[i][1] - 8, 5, '#f5e5a4');
+    ctx.strokeStyle = '#7e6747';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+  uiPanel(ctx, x + 14, y + 13, 154, 35, '#315144', 11);
+  label(ctx, level.name, x + 25, y + 36, 16, UI.text, 'left');
+  label(ctx, `${level.waves} 波 · ${level.subtitle.split('·')[0]}`, x + width - 18, y + 36, 11, '#fff0bf', 'right');
+  ctx.restore();
+}
+
 function drawMainMenu(ctx, game) {
   const gradient = ctx.createLinearGradient(0, 0, 0, game.h);
   gradient.addColorStop(0, '#111c2d');
@@ -327,6 +410,8 @@ function drawMainMenu(ctx, game) {
   resourcePill(ctx, 314, 18, 59, '能', '100', '#8bd19a');
   label(ctx, '今日任务：守住一波敌人', 164, 73, 10, UI.muted, 'left');
   drawTownScene(ctx, game);
+  uiPanel(ctx, 92, 111, 206, 36, UI.wood, 12);
+  label(ctx, '守护小镇', 195, 136, 19, UI.text);
   const sceneButtons = homeButtonLayout(game.h).filter(button => button.featured);
   const challenge = sceneButtons[0];
   const expedition = sceneButtons[1];
@@ -346,8 +431,10 @@ function drawMainMenu(ctx, game) {
     label(ctx, button.icon, button.x + button.width / 2, button.y + 24, active ? 14 : 11, active ? UI.gold : UI.muted);
     label(ctx, button.navLabel, button.x + button.width / 2, button.y + 47, 10, active ? UI.gold : UI.muted);
   });
-  label(ctx, '挂机奖励', 28, 500, 11, '#ffe29a', 'left');
-  circle(ctx, 17, 497, 5, '#d66c58');
+  uiPanel(ctx, 20, 466, 102, 30, '#335849', 10);
+  drawChest(ctx, 39, 481, '#7e9bc0');
+  label(ctx, '挂机奖励', 79, 486, 11, '#ffe29a');
+  circle(ctx, 113, 469, 5, '#d66c58');
 }
 
 function drawFeature(ctx, game) {
@@ -375,26 +462,29 @@ function drawFeature(ctx, game) {
 }
 
 function drawLevelSelect(ctx, game) {
-  ctx.fillStyle = UI.background;
+  const gradient = ctx.createLinearGradient(0, 0, 0, game.h);
+  gradient.addColorStop(0, '#142334');
+  gradient.addColorStop(1, '#24352f');
+  ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, game.w, game.h);
-  backArrow(ctx, 28, 51);
-  label(ctx, '选择守护地图', 195, 66, 28, UI.text);
-  label(ctx, '完成前一关后解锁下一张地图', 195, 94, 13, UI.muted);
+  uiPanel(ctx, 14, 16, 362, 70, UI.panel, 18);
+  backArrow(ctx, 35, 51);
+  label(ctx, '选择守护地图', 63, 48, 22, UI.text, 'left');
+  label(ctx, '完成前一关后解锁下一张地图', 63, 68, 11, UI.muted, 'left');
+  resourcePill(ctx, 256, 23, 55, '金', game.wallet.coins, UI.gold);
+  resourcePill(ctx, 317, 23, 51, '钻', game.wallet.gems, UI.blue);
+  uiPanel(ctx, 14, 102, 362, 27, '#385b4d', 10);
+  label(ctx, `已解锁 ${game.unlockedLevel}/${LEVELS.length} 张地图`, 195, 121, 12, '#d7edc0');
   LEVELS.forEach((level, index) => {
     const col = index % 2;
     const row = Math.floor(index / 2);
     const x = 20 + col * 180;
-    const y = 130 + row * 124;
+    const y = 143 + row * 124;
     const locked = level.id > game.unlockedLevel;
-    uiPanel(ctx, x, y, 165, 108, locked ? '#303b40' : UI.panel, 16);
-    circle(ctx, x + 31, y + 32, 20, locked ? '#46504c' : level.color);
-    label(ctx, locked ? '锁' : String(level.id), x + 31, y + 39, 19, locked ? '#929b8f' : PALETTE.ink);
-    label(ctx, level.name, x + 58, y + 28, 16, locked ? '#929b8f' : UI.text, 'left');
-    label(ctx, level.subtitle, x + 58, y + 49, 11, locked ? '#7b8780' : UI.muted, 'left');
-    label(ctx, `${level.waves} 波 · ${locked ? '完成前关卡解锁' : '可挑战'}`, x + 13, y + 88, 11, locked ? '#7b8780' : UI.gold, 'left');
+    drawLevelCard(ctx, level, x, y, 165, 108, locked);
   });
-  uiPanel(ctx, 52, game.h - 78, 286, 48, UI.panelDeep, 14);
-  label(ctx, '返回主页面', 195, game.h - 47, 17, UI.text);
+  const preview = LEVELS[Math.min(Math.max(0, game.level - 1), LEVELS.length - 1)];
+  drawLevelMapPreview(ctx, preview, 14, 402, 362, Math.max(185, Math.min(300, game.h - 420)));
 }
 
 function drawOverlay(ctx, game) {

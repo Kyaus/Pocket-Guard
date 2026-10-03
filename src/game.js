@@ -255,10 +255,9 @@ class Game {
     }
     if (this.state === 'levelSelect') {
       if (x <= 65 && y >= 20 && y <= 82) { this.returnToMenu(); return; }
-      if (y >= this.h - 85) { this.returnToMenu(); return; }
       const cardWidth = 165;
       const cardHeight = 108;
-      const startY = 130;
+      const startY = 143;
       const col = x < 195 ? 0 : 1;
       const row = Math.floor((y - startY) / 124);
       const id = row * 2 + col + 1;
