@@ -1,19 +1,9 @@
-// 地图道路使用格子坐标，绘制、建造约束和敌人移动共享同一份数据。
+// 地图道路使用格子坐标或美术中心线，绘制、建造约束和敌人移动共享同一份数据。
 const { GRID } = require('./levels');
 
-function createPath(roadCells, layout = GRID, top = layout.top, cellHeight = layout.maxHeight / layout.rows) {
-  const cellWidth = layout.width / layout.cols;
-  const center = ([col, row]) => ({
-    x: layout.left + (col + 0.5) * cellWidth,
-    y: top + (row + 0.5) * cellHeight
-  });
-  const anchors = roadCells.map(center);
-  const first = { x: anchors[0].x, y: top - 24 };
-  const last = { x: anchors[anchors.length - 1].x, y: top + layout.rows * cellHeight + 24 };
-  const controlPoints = [first, ...anchors, last];
+function samplePath(controlPoints, sampleCount = 6) {
   const points = [];
-  const sampleCount = 6;
-  // Catmull-Rom 采样把直角路口变成圆润的连续道路，同时保留每个地图的原始路径顺序。
+  // Catmull-Rom 采样把转弯变成圆润的连续道路。
   for (let i = 0; i < controlPoints.length - 1; i++) {
     const p0 = controlPoints[Math.max(0, i - 1)];
     const p1 = controlPoints[i];
@@ -33,8 +23,26 @@ function createPath(roadCells, layout = GRID, top = layout.top, cellHeight = lay
       });
     }
   }
-  points.push(last);
+  points.push(controlPoints[controlPoints.length - 1]);
   return points;
+}
+
+function createPath(roadCells, layout = GRID, top = layout.top, cellHeight = layout.maxHeight / layout.rows) {
+  const cellWidth = layout.width / layout.cols;
+  const center = ([col, row]) => ({
+    x: layout.left + (col + 0.5) * cellWidth,
+    y: top + (row + 0.5) * cellHeight
+  });
+  const anchors = roadCells.map(center);
+  const first = { x: anchors[0].x, y: top - 24 };
+  const last = { x: anchors[anchors.length - 1].x, y: top + layout.rows * cellHeight + 24 };
+  return samplePath([first, ...anchors, last]);
+}
+
+// 真实美术地图可以提供自己的道路中心线，避免用格子中心近似后让怪物偏离背景道路。
+function createPathFromPoints(points) {
+  if (!Array.isArray(points) || points.length < 2) return [];
+  return samplePath(points.map(([x, y]) => ({ x, y })));
 }
 
 function pathLength(points) {
@@ -68,4 +76,4 @@ function advanceEnemy(enemy, points, distance) {
   return enemy.segment === points.length - 1;
 }
 
-module.exports = { createPath, pathLength, advanceEnemy };
+module.exports = { createPath, createPathFromPoints, pathLength, advanceEnemy };

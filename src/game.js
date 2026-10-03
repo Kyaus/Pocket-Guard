@@ -1,6 +1,6 @@
 const { TYPES, UPGRADES } = require('./config');
 const { drawGame } = require('./renderer');
-const { createPath, pathLength, advanceEnemy } = require('./path');
+const { createPath, createPathFromPoints, pathLength, advanceEnemy } = require('./path');
 const { MAX_LEVEL, upgradeCost, sellValue, towerStats } = require('./tower-stats');
 const { GRID, LEVELS, getLevel } = require('./levels');
 const { hitHomeButton } = require('./home');
@@ -47,7 +47,14 @@ class Game {
       this.grassByLevel[level.id] = new Set(initialGrass);
     }
     this.unlockedGrass = this.grassByLevel[level.id];
-    this.path = createPath(this.roadCells, GRID, this.top, this.cellH);
+    if (level.pathPoints) {
+      const mapWidth = 358;
+      const mapHeight = this.bottom - this.top + 39;
+      const mapPoints = level.pathPoints.map(([x, y]) => [16 + x * mapWidth, this.top - 6 + y * mapHeight]);
+      this.path = createPathFromPoints(mapPoints);
+    } else {
+      this.path = createPath(this.roadCells, GRID, this.top, this.cellH);
+    }
     this.pathLength = pathLength(this.path);
   }
   slotPosition(col, row) {
@@ -389,7 +396,8 @@ class Game {
         const slot = this.slotPosition(slotCol, slotRow);
         return { col: slotCol, row: slotRow, distance: Math.hypot(slot.x - x, slot.y - y) };
       }).sort((a, b) => a.distance - b.distance)[0];
-      if (nearest && nearest.distance <= Math.max(24, Math.min(this.cellW, this.cellH) * 0.7)) {
+      // 坑位的可点击半径略大于美术坑本身，避免把旁边的道路误吸附到坑位。
+      if (nearest && nearest.distance <= Math.max(26, Math.min(this.cellW, this.cellH) * 0.56)) {
         col = nearest.col; row = nearest.row;
       }
     }

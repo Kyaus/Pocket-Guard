@@ -75,6 +75,26 @@ test('道路转弯使用平滑采样，圆角路径仍保持入口和出口', ()
   assert.ok(path.some(point => point.x !== Math.round(point.x)));
 });
 
+test('第一关底图使用道路中心线，所有可见坑位都能命中', () => {
+  const game = new Game(390, 844);
+  game.startLevel(1);
+  assert.equal(game.path[0].x, 16 + 0.55 * 358);
+  assert.equal(game.path[0].y, game.top - 6);
+  game.coins = 9999;
+  for (const key of game.buildSlots) {
+    const [col, row] = key.split(',').map(Number);
+    const slot = game.slotPosition(col, row);
+    game.touch(slot.x, slot.y);
+    if (game.selectedGrass) {
+      assert.deepEqual(game.selectedGrass, { col, row });
+      game.unlockGrass();
+      game.touch(slot.x, slot.y);
+    }
+    assert.ok(game.towers.some(tower => tower.col === col && tower.row === row), `${key} 坑位应可建造`);
+    game.selectedTower = null;
+  }
+});
+
 test('点击守卫打开管理面板，升级扣费、满级不再扣费，出售返还累计投入', () => {
   const game = new Game(390, 844);
   game.startLevel(1);
