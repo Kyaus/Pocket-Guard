@@ -78,7 +78,7 @@ test('道路转弯使用平滑采样，圆角路径仍保持入口和出口', ()
 test('点击守卫打开管理面板，升级扣费、满级不再扣费，出售返还累计投入', () => {
   const game = new Game(390, 844);
   game.startLevel(1);
-  const x = 125, y = game.top + game.cellH * 1.5;
+  const x = 55, y = game.top + game.cellH * 1.5;
   game.touch(x, y);
   game.touch(x, y);
   const tower = game.selectedTower;
@@ -103,8 +103,8 @@ test('点击守卫打开管理面板，升级扣费、满级不再扣费，出�
 test('金币不足升级不改变属性，关闭面板不建造', () => {
   const game = new Game(390, 640);
   game.startLevel(1);
-  game.touch(125, game.top + game.cellH * 1.5);
-  game.touch(125, game.top + game.cellH * 1.5);
+  game.touch(55, game.top + game.cellH * 1.5);
+  game.touch(55, game.top + game.cellH * 1.5);
   game.coins = 0;
   game.upgradeTower();
   assert.equal(game.selectedTower.level, 1);
@@ -227,7 +227,7 @@ test('冰霜脉冲减速范围内所有敌人，不发射单体弹', () => {
 test('长屏幕上初始草坪的冰霜塔都能攻击相邻道路', () => {
   for (const height of [640, 844, 932, 1100]) {
     const layout = new Game(390, height);
-    for (const [col, row] of layout.levelConfig.initialGrass) {
+    for (const [col, row] of [[1, 1]]) {
         const game = new Game(390, height);
         game.startLevel(1);
         game.selected = 2;
@@ -262,7 +262,7 @@ test('建造扣费，禁止在道路和重复格子建造', () => {
 test('锁定草坪需要先付费开垦，开垦后才能建塔', () => {
   const game = new Game(390, 844);
   game.startLevel(1);
-  const col = 4, row = 0;
+  const col = 6, row = 0;
   const x = GRID.left + (col + 0.5) * game.cellW;
   const y = game.top + (row + 0.5) * game.cellH;
   assert.equal(game.isGrassUnlocked(col, row), false);

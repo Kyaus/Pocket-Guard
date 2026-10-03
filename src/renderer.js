@@ -118,12 +118,13 @@ function drawImageCover(ctx, image, x, y, width, height) {
 }
 
 function battlefield(ctx, game) {
+  const integratedMap = Boolean(MAP_BACKGROUND && game.level === 1);
   panel(ctx, 14, game.top - 8, 362, game.bottom - game.top + 44, game.levelConfig.color || PALETTE.grass, 18);
   ctx.save();
   ctx.beginPath();
   ctx.rect(16, game.top - 6, 358, game.bottom - game.top + 39);
   ctx.clip();
-  if (MAP_BACKGROUND) {
+  if (integratedMap) {
     drawImageCover(ctx, MAP_BACKGROUND, 16, game.top - 6, 358, game.bottom - game.top + 39);
   } else {
     const terrain = ctx.createLinearGradient(0, game.top, 0, game.bottom);
@@ -156,20 +157,22 @@ function battlefield(ctx, game) {
       circle(ctx, x, y, 4 + (i % 2), i % 2 ? '#d6bc6b' : '#6a9c5a', false);
     }
   }
-  ctx.lineCap = 'round';
-  ctx.lineJoin = 'round';
-  const roadOuter = Math.max(24, game.cellW * GRID.roadWidth);
-  const roadInner = Math.max(19, roadOuter - 6);
-  for (const [width, color] of [[roadOuter, '#bda574'], [roadInner, PALETTE.path]]) {
-    ctx.beginPath();
-    game.path.forEach((point, index) => {
-      const y = Math.max(game.top - 6, Math.min(game.bottom + 20, point.y));
-      if (index === 0) ctx.moveTo(point.x, y);
-      else ctx.lineTo(point.x, y);
-    });
-    ctx.strokeStyle = color;
-    ctx.lineWidth = width;
-    ctx.stroke();
+  if (!integratedMap) {
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    const roadOuter = Math.max(24, game.cellW * GRID.roadWidth);
+    const roadInner = Math.max(19, roadOuter - 6);
+    for (const [width, color] of [[roadOuter, '#bda574'], [roadInner, PALETTE.path]]) {
+      ctx.beginPath();
+      game.path.forEach((point, index) => {
+        const y = Math.max(game.top - 6, Math.min(game.bottom + 20, point.y));
+        if (index === 0) ctx.moveTo(point.x, y);
+        else ctx.lineTo(point.x, y);
+      });
+      ctx.strokeStyle = color;
+      ctx.lineWidth = width;
+      ctx.stroke();
+    }
   }
   ctx.restore();
   for (let row = 0; row < GRID.rows; row++) {
@@ -182,18 +185,20 @@ function battlefield(ctx, game) {
       const x = slot.x;
       const y = slot.y;
       if (road) {
-        panel(ctx, x - game.cellW * 0.16, y - 3, game.cellW * 0.32, 6, '#dfbd7e', 3, null);
+        if (!integratedMap) panel(ctx, x - game.cellW * 0.16, y - 3, game.cellW * 0.32, 6, '#dfbd7e', 3, null);
       } else {
+        if (integratedMap && !game.isBuildSlot(col, row)) continue;
         const unlocked = game.isGrassUnlocked(col, row);
         const selected = game.selectedGrass && game.selectedGrass.col === col && game.selectedGrass.row === row;
-        const socketImage = unlocked ? PIT_IMAGE : GRASS_IMAGE;
+        const socketImage = integratedMap ? (unlocked ? null : GRASS_IMAGE) : unlocked ? PIT_IMAGE : GRASS_IMAGE;
         if (socketImage) {
           ctx.save();
-          ctx.globalAlpha = 0.96;
-          ctx.drawImage(socketImage, x - game.cellW * 0.48, y - game.cellH * 0.43,
-            game.cellW * 0.96, game.cellH * 0.86);
+          ctx.globalAlpha = integratedMap ? 0.9 : 0.96;
+          const spriteScale = integratedMap ? 0.78 : 0.96;
+          ctx.drawImage(socketImage, x - game.cellW * spriteScale / 2, y - game.cellH * spriteScale / 2,
+            game.cellW * spriteScale, game.cellH * spriteScale);
           ctx.restore();
-        } else {
+        } else if (!integratedMap) {
           panel(ctx, x - game.cellW / 2 + 2, y - game.cellH / 2 + 2,
             game.cellW - 4, game.cellH - 4,
             unlocked ? ((row + col) % 2 ? '#83c878' : '#94d181') : '#527f5b',
@@ -218,9 +223,11 @@ function battlefield(ctx, game) {
     }
   }
   const exit = game.path[game.path.length - 1];
-  panel(ctx, exit.x - 38, game.bottom + 1, 76, 29, '#fff1c6', 5);
-  panel(ctx, exit.x - 42, game.bottom - 4, 84, 10, '#ea977d', 3);
-  panel(ctx, exit.x - 8, game.bottom + 12, 16, 18, '#a07d57', 3);
+  if (!integratedMap) {
+    panel(ctx, exit.x - 38, game.bottom + 1, 76, 29, '#fff1c6', 5);
+    panel(ctx, exit.x - 42, game.bottom - 4, 84, 10, '#ea977d', 3);
+    panel(ctx, exit.x - 8, game.bottom + 12, 16, 18, '#a07d57', 3);
+  }
   if (game.selectedTower) {
     ctx.save();
     ctx.beginPath();

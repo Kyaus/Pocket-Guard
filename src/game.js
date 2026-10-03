@@ -36,6 +36,7 @@ class Game {
     this.cellW = GRID.width / GRID.cols;
     this.characterScale = Math.min(GRID.characterScale, this.cellH / 52);
     this.roadCells = level.roadCells;
+    this.buildSlots = level.buildSlots ? new Set(level.buildSlots.map(([col, row]) => `${col},${row}`)) : null;
     this.grassUnlockCost = level.grassUnlockCost || 40;
     const initialGrass = (level.initialGrass || []).map(([col, row]) => `${col},${row}`);
     if (this.grassByLevel[level.id] instanceof Set) {
@@ -50,6 +51,13 @@ class Game {
     this.pathLength = pathLength(this.path);
   }
   slotPosition(col, row) {
+    const mapped = this.levelConfig.socketLayout && this.levelConfig.socketLayout[`${col},${row}`];
+    if (mapped) {
+      return {
+        x: 16 + mapped[0] * 358,
+        y: this.top - 6 + mapped[1] * (this.bottom - this.top + 39)
+      };
+    }
     const offsetX = (((col * 7 + row * 11 + this.level * 5) % 9) - 4) * 1.35;
     const offsetY = (((col * 13 + row * 3 + this.level * 7) % 9) - 4) * 1.5;
     return {
@@ -228,6 +236,10 @@ class Game {
     }
   }
   grassKey(col, row) { return `${col},${row}`; }
+  isBuildSlot(col, row) {
+    if (this.roadCells.some(([c, r]) => c === col && r === row)) return false;
+    return !this.buildSlots || this.buildSlots.has(this.grassKey(col, row));
+  }
   isGrassUnlocked(col, row) {
     return this.unlockedGrass && this.unlockedGrass.has(this.grassKey(col, row));
   }
@@ -370,8 +382,19 @@ class Game {
     }
     if (y >= this.h - 72 && y <= this.h - 22 && x >= 20 && x <= 370) { this.startWave(); return; }
     if (y < this.top || y >= this.bottom || x < 20 || x >= 370) return;
-    const col = Math.floor((x - GRID.left) / this.cellW), row = Math.floor((y - this.top) / this.cellH);
+    let col = Math.floor((x - GRID.left) / this.cellW), row = Math.floor((y - this.top) / this.cellH);
+    if (this.buildSlots) {
+      const nearest = Array.from(this.buildSlots).map(key => {
+        const [slotCol, slotRow] = key.split(',').map(Number);
+        const slot = this.slotPosition(slotCol, slotRow);
+        return { col: slotCol, row: slotRow, distance: Math.hypot(slot.x - x, slot.y - y) };
+      }).sort((a, b) => a.distance - b.distance)[0];
+      if (nearest && nearest.distance <= Math.max(24, Math.min(this.cellW, this.cellH) * 0.7)) {
+        col = nearest.col; row = nearest.row;
+      }
+    }
     if (this.roadCells.some(([c, r]) => c === col && r === row)) { this.message('道路上不能建造'); return; }
+    if (!this.isBuildSlot(col, row)) { this.message('这里是森林装饰区'); return; }
     const existing = this.towers.find(t => t.col === col && t.row === row);
     if (existing) { this.selectedTower = existing; return; }
     if (!this.isGrassUnlocked(col, row)) {
