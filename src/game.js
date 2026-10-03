@@ -244,6 +244,7 @@ class Game {
       if (button) {
         if (button.id === 'guardian') this.enterLevelSelect();
         else this.openHomeFeature(button.id);
+        return;
       }
       if (y >= this.h - 70) this.returnToMenu();
       return;

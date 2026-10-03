@@ -63,6 +63,21 @@ function circle(ctx, x, y, radius, fill, outline = true) {
   }
 }
 
+function polygon(ctx, points, fill, stroke = null) {
+  ctx.beginPath();
+  points.forEach(([x, y], index) => {
+    if (index === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  });
+  ctx.closePath();
+  ctx.fillStyle = fill;
+  ctx.fill();
+  if (stroke) {
+    ctx.strokeStyle = stroke;
+    ctx.stroke();
+  }
+}
+
 function backArrow(ctx, x = 28, y = 48) {
   ctx.save();
   ctx.strokeStyle = UI.gold;
@@ -223,45 +238,116 @@ function drawTowerPanel(ctx, game) {
   label(ctx, '出售 +' + sellValue(tower) + ' 金', 285, game.h - 111, 16, UI.text);
 }
 
+function resourcePill(ctx, x, y, width, icon, value, color) {
+  uiPanel(ctx, x, y, width, 32, UI.panelDeep, 10);
+  circle(ctx, x + 17, y + 16, 9, color);
+  label(ctx, icon, x + 17, y + 20, 10, UI.woodDark);
+  label(ctx, value, x + 31, y + 21, 12, UI.text, 'left');
+  label(ctx, '+', x + width - 8, y + 21, 12, UI.gold);
+}
+
+function drawTree(ctx, x, y, scale, color) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(scale, scale);
+  ctx.fillStyle = '#6d4d37';
+  ctx.fillRect(-4, 0, 8, 32);
+  polygon(ctx, [[0, -56], [-28, -8], [28, -8]], color);
+  polygon(ctx, [[0, -36], [-34, 4], [34, 4]], color);
+  ctx.restore();
+}
+
+function drawChest(ctx, x, y, color) {
+  uiPanel(ctx, x - 18, y - 14, 36, 25, color, 7);
+  ctx.fillStyle = '#f7d27b';
+  ctx.fillRect(x - 18, y - 3, 36, 3);
+  circle(ctx, x, y - 1, 3, UI.gold);
+}
+
+function drawTownScene(ctx, game) {
+  const x = 14; const y = 100; const width = 362; const height = 407;
+  uiPanel(ctx, x, y, width, height, '#244b4a', 22);
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(x + 2, y + 2, width - 4, height - 4);
+  ctx.clip();
+  const sky = ctx.createLinearGradient(0, y, 0, y + height);
+  sky.addColorStop(0, '#1b3547');
+  sky.addColorStop(0.55, '#2f665d');
+  sky.addColorStop(1, '#234738');
+  ctx.fillStyle = sky;
+  ctx.fillRect(x, y, width, height);
+  circle(ctx, 294, 157, 38, '#d7cf9a', false);
+  circle(ctx, 307, 148, 38, '#1b3547', false);
+  for (let i = 0; i < 14; i++) circle(ctx, x + 18 + (i * 47) % 330, y + 20 + (i * 31) % 130, 1.5, '#f5df9b', false);
+  drawTree(ctx, 42, 280, 0.92, '#1c3e3d');
+  drawTree(ctx, 348, 275, 1.06, '#1b3c3b');
+  drawTree(ctx, 83, 230, 0.56, '#2f5b4d');
+  drawTree(ctx, 315, 235, 0.64, '#315b4d');
+  // 远景山脊与中央传送门，使用叠层和高光制造轻微三维感。
+  polygon(ctx, [[65, 300], [133, 210], [195, 267], [255, 201], [337, 300]], '#315d58');
+  panel(ctx, 134, 195, 122, 138, '#172b35', 55, '#687c68');
+  panel(ctx, 145, 207, 100, 126, '#3d8d82', 45, '#8bbd91');
+  const portal = ctx.createRadialGradient(195, 263, 4, 195, 263, 78);
+  portal.addColorStop(0, '#fff4ae'); portal.addColorStop(0.35, '#80e0bd'); portal.addColorStop(1, 'rgba(56,164,148,0)');
+  ctx.fillStyle = portal; ctx.fillRect(116, 185, 158, 170);
+  panel(ctx, 159, 242, 72, 92, '#7be0b0', 34, '#d1f1c1');
+  label(ctx, '第 ' + Math.max(1, game.level) + ' 关', 195, 163, 14, UI.text);
+  label(ctx, game.levelConfig ? game.levelConfig.name : '晨光草坡', 195, 182, 12, '#c5e2bd');
+  // 前景平台和小队，给主界面一个可以承载角色的舞台。
+  polygon(ctx, [[42, 390], [194, 346], [350, 390], [350, 439], [42, 439]], '#315444');
+  polygon(ctx, [[42, 390], [194, 356], [350, 390], [194, 416]], '#5e7d5a');
+  drawChest(ctx, 78, 388, '#7e9bc0');
+  drawChest(ctx, 312, 388, '#b27a50');
+  drawGuardian(ctx, 160, 370, 0, false, game.time, Infinity, -0.6, 2, 0.58);
+  drawGuardian(ctx, 214, 370, 2, false, game.time, Infinity, -0.6, 1, 0.58);
+  drawMonster(ctx, { x: 115, y: 384, kind: 0, hp: 100, maxHp: 100, slow: 0, progress: 0 }, game.time, 0.55);
+  drawMonster(ctx, { x: 270, y: 384, kind: 1, hp: 100, maxHp: 100, slow: 0, progress: 0 }, game.time, 0.55);
+  ctx.restore();
+}
+
 function drawMainMenu(ctx, game) {
-  ctx.fillStyle = UI.background;
+  const gradient = ctx.createLinearGradient(0, 0, 0, game.h);
+  gradient.addColorStop(0, '#111c2d');
+  gradient.addColorStop(0.65, UI.background);
+  gradient.addColorStop(1, '#101923');
+  ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, game.w, game.h);
-  for (let i = 0; i < 18; i++) {
-    circle(ctx, 12 + (i * 73) % 380, 120 + (i * 97) % Math.max(1, game.h - 150), 1.5, i % 2 ? '#4b654e' : '#6b6042', false);
-  }
-  uiPanel(ctx, 14, 14, 362, 96, UI.panel, 18);
-  circle(ctx, 58, 62, 31, '#304f4e');
+  // 顶部头像与资源条，采用参考图里的横向木牌布局。
+  uiPanel(ctx, 10, 10, 370, 76, UI.panel, 16);
+  circle(ctx, 45, 48, 27, '#304f4e');
   ctx.strokeStyle = UI.gold; ctx.lineWidth = 3; ctx.stroke();
-  drawGuardian(ctx, 58, 72, game.profile.avatarType || 2, false, game.time, Infinity, -0.55, 3, 0.5);
-  label(ctx, game.profile.name || '守卫学徒', 101, 48, 18, UI.text, 'left');
-  label(ctx, 'Lv.' + (game.profile.level || 1) + '  小镇守护者', 101, 72, 12, UI.muted, 'left');
-  uiPanel(ctx, 230, 29, 67, 30, UI.panelDeep, 10);
-  label(ctx, '金币 ' + game.wallet.coins, 263, 49, 11, UI.gold);
-  uiPanel(ctx, 302, 29, 67, 30, UI.panelDeep, 10);
-  label(ctx, '钻石 ' + game.wallet.gems, 335, 49, 11, UI.blue);
-  label(ctx, '今日任务：守住一波敌人', 230, 84, 11, UI.muted, 'left');
-  uiPanel(ctx, 14, 126, 362, 194, UI.panelGreen, 24);
-  circle(ctx, 195, 198, 51, '#486d54');
-  ctx.strokeStyle = UI.gold; ctx.lineWidth = 2; ctx.stroke();
-  drawGuardian(ctx, 171, 246, 0, false, game.time, Infinity, -0.55, 2);
-  drawGuardian(ctx, 219, 246, 2, false, game.time, Infinity, -0.55, 1);
-  label(ctx, '口袋守卫', 195, 283, 24, UI.text);
-  label(ctx, '集结守卫，击退来袭的小怪兽', 195, 304, 12, UI.muted);
-  homeButtonLayout(game.h).forEach(button => {
-    const selected = button.id === 'guardian';
-    uiPanel(ctx, button.x, button.y, button.width, button.height,
-      selected ? '#456b52' : UI.panel, 15);
-    circle(ctx, button.x + 32, button.y + button.height / 2, selected ? 25 : 22, UI.panelDeep);
-    ctx.strokeStyle = selected ? UI.gold : '#637d78'; ctx.lineWidth = 2; ctx.stroke();
-    label(ctx, button.icon, button.x + 32, button.y + button.height / 2 + 7, selected ? 24 : 20, UI.gold);
-    label(ctx, button.name, button.x + 66, button.y + button.height / 2 - 2, selected ? 18 : 16, UI.text, 'left');
-    label(ctx, button.subtitle, button.x + 66, button.y + button.height / 2 + 19, 11, UI.muted, 'left');
-    if (selected) label(ctx, '›', button.x + button.width - 24, button.y + button.height / 2 + 8, 28, UI.gold);
+  drawGuardian(ctx, 45, 58, game.profile.avatarType || 2, false, game.time, Infinity, -0.55, 3, 0.44);
+  circle(ctx, 66, 27, 6, UI.red);
+  label(ctx, '!', 66, 31, 9, '#fff6d1');
+  label(ctx, game.profile.name || '守卫学徒', 80, 37, 16, UI.text, 'left');
+  label(ctx, 'Lv.' + (game.profile.level || 1) + '  小镇守护者', 80, 61, 11, UI.muted, 'left');
+  resourcePill(ctx, 164, 18, 69, '金', game.wallet.coins, UI.gold);
+  resourcePill(ctx, 239, 18, 69, '钻', game.wallet.gems, UI.blue);
+  resourcePill(ctx, 314, 18, 59, '能', '100', '#8bd19a');
+  label(ctx, '今日任务：守住一波敌人', 164, 73, 10, UI.muted, 'left');
+  drawTownScene(ctx, game);
+  const sceneButtons = homeButtonLayout(game.h).filter(button => button.featured);
+  const challenge = sceneButtons[0];
+  const expedition = sceneButtons[1];
+  uiPanel(ctx, challenge.x, challenge.y, challenge.width, challenge.height, '#b86e3d', 16);
+  label(ctx, '⚔', challenge.x + 26, challenge.y + 40, 24, '#fff1b0');
+  label(ctx, '挑战', challenge.x + 92, challenge.y + 28, 20, UI.text);
+  label(ctx, '守护小镇', challenge.x + 92, challenge.y + 49, 11, '#ffe3a1');
+  uiPanel(ctx, expedition.x, expedition.y, expedition.width, expedition.height, '#3b6370', 16);
+  label(ctx, '✦', expedition.x + expedition.width / 2, expedition.y + 27, 19, '#d4f2ff');
+  label(ctx, '合作', expedition.x + expedition.width / 2, expedition.y + 49, 13, UI.text);
+  const navButtons = homeButtonLayout(game.h).filter(button => button.nav);
+  uiPanel(ctx, 6, game.h - 73, 378, 67, UI.panelDeep, 12);
+  navButtons.forEach(button => {
+    const active = button.navLabel === '主线';
+    circle(ctx, button.x + button.width / 2, button.y + 19, active ? 16 : 13, active ? '#657a4e' : '#334653');
+    ctx.strokeStyle = active ? UI.gold : '#637d78'; ctx.lineWidth = 1.5; ctx.stroke();
+    label(ctx, button.icon, button.x + button.width / 2, button.y + 24, active ? 14 : 11, active ? UI.gold : UI.muted);
+    label(ctx, button.navLabel, button.x + button.width / 2, button.y + 47, 10, active ? UI.gold : UI.muted);
   });
-  uiPanel(ctx, 14, game.h - 62, 362, 44, UI.panelDeep, 14);
-  label(ctx, '大厅', 120, game.h - 33, 14, UI.gold);
-  label(ctx, '英雄', 195, game.h - 33, 14, UI.muted);
-  label(ctx, '设置', 270, game.h - 33, 14, UI.muted);
+  label(ctx, '挂机奖励', 28, 500, 11, '#ffe29a', 'left');
+  circle(ctx, 17, 497, 5, '#d66c58');
 }
 
 function drawFeature(ctx, game) {

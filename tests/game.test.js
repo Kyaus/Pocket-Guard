@@ -11,7 +11,8 @@ const { homeButtonLayout } = require('../src/home');
 test('登录后进入主页面，点击守护小镇入口进入关卡选择', () => {
   const game = new Game(390, 844);
   assert.equal(game.state, 'menu');
-  game.touch(195, 380);
+  const guardian = homeButtonLayout(844).find(button => button.id === 'guardian' && button.featured);
+  game.touch(guardian.x + guardian.width / 2, guardian.y + guardian.height / 2);
   assert.equal(game.state, 'levelSelect');
   game.touch(100, 150);
   assert.equal(game.state, 'ready');

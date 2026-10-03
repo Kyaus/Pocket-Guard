@@ -8,20 +8,16 @@ const HOME_FEATURES = [
 ];
 
 function homeButtonLayout(height) {
-  const top = 340;
-  const cardWidth = 172;
-  const cardHeight = 78;
-  const gapX = 18;
-  const gapY = 12;
-  return HOME_FEATURES.map((feature, index) => {
-    if (index === 0) {
-      return { ...feature, x: 18, y: top, width: 354, height: 96 };
-    }
-    const col = index % 2;
-    const row = Math.floor((index - 1) / 2);
-    return { ...feature, x: 18 + (index % 2 === 1 ? 0 : cardWidth + gapX),
-      y: top + 96 + gapY + row * (cardHeight + gapY), width: cardWidth, height: cardHeight };
-  });
+  const navY = height - 66;
+  return [
+    { ...HOME_FEATURES[0], x: 55, y: 516, width: 170, height: 62, featured: true },
+    { ...HOME_FEATURES[2], x: 232, y: 516, width: 103, height: 62, featured: true },
+    { ...HOME_FEATURES[4], x: 8, y: navY, width: 72, height: 56, nav: true, navLabel: '主角' },
+    { ...HOME_FEATURES[1], x: 84, y: navY, width: 72, height: 56, nav: true, navLabel: '英雄' },
+    { ...HOME_FEATURES[0], x: 160, y: navY, width: 72, height: 56, nav: true, navLabel: '主线' },
+    { ...HOME_FEATURES[3], x: 236, y: navY, width: 72, height: 56, nav: true, navLabel: '城市' },
+    { ...HOME_FEATURES[2], x: 312, y: navY, width: 72, height: 56, nav: true, navLabel: '公会' }
+  ];
 }
 
 function hitHomeButton(x, y, height) {
