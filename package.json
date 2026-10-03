@@ -6,6 +6,6 @@
   "license": "MIT",
   "scripts": {
     "test": "node --test tests/game.test.js",
-    "check": "node --check game.js && node --check src/game.js && node --check src/config.js"
+    "check": "node --check game.js && node --check src/game.js && node --check src/config.js && node --check src/renderer.js && node --check src/path.js && node --check src/characters.js && node --check src/animation.js"
   }
 }
