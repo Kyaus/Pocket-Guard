@@ -1,9 +1,12 @@
 const { Game } = require('./src/game');
-const { setGrassImage } = require('./src/renderer');
+const { setBattleAssets } = require('./src/renderer');
 const canvas = wx.createCanvas();
-const grassImage = wx.createImage();
-grassImage.onload = () => setGrassImage(grassImage);
-grassImage.src = 'assets/grass-patch.png';
+[['grass', 'assets/grass-patch.png'], ['pit', 'assets/build-pit.png'], ['background', 'assets/forest-map-bg.png']]
+  .forEach(([key, source]) => {
+    const image = wx.createImage();
+    image.onload = () => setBattleAssets({ [key]: image });
+    image.src = source;
+  });
 const info = wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync();
 const ratio = Math.min(info.pixelRatio || 1, 3);
 canvas.width = Math.round(info.windowWidth * ratio);

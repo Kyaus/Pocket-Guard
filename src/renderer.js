@@ -4,7 +4,7 @@ const { MAX_LEVEL, upgradeCost, sellValue, towerStats } = require('./tower-stats
 const { GRID, LEVELS } = require('./levels');
 const { homeButtonLayout } = require('./home');
 
-// 卡通视觉使用 Canvas 路径绘制，图形源码可直接修改，无外部素材依赖。
+// 卡通视觉以 Canvas 路径为主，森林底图和草地/坑位贴片作为可替换的本地资源。
 const PALETTE = {
   ink: '#38513d', cream: '#fff8df', grass: '#b8db85', path: '#eccc90',
   green: '#69b96b', shadow: '#48804c', muted: '#758268'
@@ -23,9 +23,17 @@ const UI = {
   red: '#bd735f'
 };
 let GRASS_IMAGE = null;
+let PIT_IMAGE = null;
+let MAP_BACKGROUND = null;
 
 function setGrassImage(image) {
   GRASS_IMAGE = image;
+}
+
+function setBattleAssets({ grass, pit, background } = {}) {
+  if (grass) GRASS_IMAGE = grass;
+  if (pit) PIT_IMAGE = pit;
+  if (background) MAP_BACKGROUND = background;
 }
 
 function panel(ctx, x, y, width, height, fill, radius = 12, stroke = PALETTE.ink) {
@@ -102,40 +110,51 @@ function uiPanel(ctx, x, y, width, height, fill = UI.panel, radius = 14) {
   panel(ctx, x, y, width, height, fill, radius, UI.wood);
 }
 
+function drawImageCover(ctx, image, x, y, width, height) {
+  const scale = Math.max(width / image.width, height / image.height);
+  const drawWidth = image.width * scale;
+  const drawHeight = image.height * scale;
+  ctx.drawImage(image, x + (width - drawWidth) / 2, y + (height - drawHeight) / 2, drawWidth, drawHeight);
+}
+
 function battlefield(ctx, game) {
   panel(ctx, 14, game.top - 8, 362, game.bottom - game.top + 44, game.levelConfig.color || PALETTE.grass, 18);
   ctx.save();
   ctx.beginPath();
   ctx.rect(16, game.top - 6, 358, game.bottom - game.top + 39);
   ctx.clip();
-  const terrain = ctx.createLinearGradient(0, game.top, 0, game.bottom);
-  terrain.addColorStop(0, '#6fb878');
-  terrain.addColorStop(0.52, '#4f9a68');
-  terrain.addColorStop(1, '#2f7155');
-  ctx.fillStyle = terrain;
-  ctx.fillRect(16, game.top - 6, 358, game.bottom - game.top + 39);
-  // 两侧溪流、林缘和岩石让战场从“棋盘格”变成森林场景。
-  ctx.lineCap = 'round';
-  ctx.beginPath();
-  ctx.moveTo(27, game.top - 18);
-  ctx.bezierCurveTo(53, game.top + 90, 20, game.top + 190, 43, game.bottom + 25);
-  ctx.strokeStyle = '#286d79'; ctx.lineWidth = 17; ctx.stroke();
-  ctx.strokeStyle = '#64c6b5'; ctx.lineWidth = 9; ctx.stroke();
-  ctx.beginPath();
-  ctx.moveTo(363, game.top - 5);
-  ctx.bezierCurveTo(337, game.top + 125, 373, game.top + 245, 350, game.bottom + 15);
-  ctx.strokeStyle = '#2c7780'; ctx.lineWidth = 12; ctx.stroke();
-  ctx.strokeStyle = '#6bd0b2'; ctx.lineWidth = 5; ctx.stroke();
-  const forest = [
-    [34, game.top + 33, 0.34], [359, game.top + 42, 0.38],
-    [37, game.top + 154, 0.27], [355, game.top + 210, 0.31],
-    [32, game.bottom - 20, 0.34], [360, game.bottom - 42, 0.3]
-  ];
-  forest.forEach(([x, y, scale], index) => drawTree(ctx, x, y, scale, index % 2 ? '#1f5b47' : '#285f4b'));
-  for (let i = 0; i < 8; i++) {
-    const x = 55 + (i * 43) % 285;
-    const y = game.top + 18 + (i * 79) % Math.max(80, game.bottom - game.top - 35);
-    circle(ctx, x, y, 4 + (i % 2), i % 2 ? '#d6bc6b' : '#6a9c5a', false);
+  if (MAP_BACKGROUND) {
+    drawImageCover(ctx, MAP_BACKGROUND, 16, game.top - 6, 358, game.bottom - game.top + 39);
+  } else {
+    const terrain = ctx.createLinearGradient(0, game.top, 0, game.bottom);
+    terrain.addColorStop(0, '#6fb878');
+    terrain.addColorStop(0.52, '#4f9a68');
+    terrain.addColorStop(1, '#2f7155');
+    ctx.fillStyle = terrain;
+    ctx.fillRect(16, game.top - 6, 358, game.bottom - game.top + 39);
+    // 两侧溪流、林缘和岩石让战场从“棋盘格”变成森林场景。
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(27, game.top - 18);
+    ctx.bezierCurveTo(53, game.top + 90, 20, game.top + 190, 43, game.bottom + 25);
+    ctx.strokeStyle = '#286d79'; ctx.lineWidth = 17; ctx.stroke();
+    ctx.strokeStyle = '#64c6b5'; ctx.lineWidth = 9; ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(363, game.top - 5);
+    ctx.bezierCurveTo(337, game.top + 125, 373, game.top + 245, 350, game.bottom + 15);
+    ctx.strokeStyle = '#2c7780'; ctx.lineWidth = 12; ctx.stroke();
+    ctx.strokeStyle = '#6bd0b2'; ctx.lineWidth = 5; ctx.stroke();
+    const forest = [
+      [34, game.top + 33, 0.34], [359, game.top + 42, 0.38],
+      [37, game.top + 154, 0.27], [355, game.top + 210, 0.31],
+      [32, game.bottom - 20, 0.34], [360, game.bottom - 42, 0.3]
+    ];
+    forest.forEach(([x, y, scale], index) => drawTree(ctx, x, y, scale, index % 2 ? '#1f5b47' : '#285f4b'));
+    for (let i = 0; i < 8; i++) {
+      const x = 55 + (i * 43) % 285;
+      const y = game.top + 18 + (i * 79) % Math.max(80, game.bottom - game.top - 35);
+      circle(ctx, x, y, 4 + (i % 2), i % 2 ? '#d6bc6b' : '#6a9c5a', false);
+    }
   }
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
@@ -167,10 +186,11 @@ function battlefield(ctx, game) {
       } else {
         const unlocked = game.isGrassUnlocked(col, row);
         const selected = game.selectedGrass && game.selectedGrass.col === col && game.selectedGrass.row === row;
-        if (GRASS_IMAGE) {
+        const socketImage = unlocked ? PIT_IMAGE : GRASS_IMAGE;
+        if (socketImage) {
           ctx.save();
-          ctx.globalAlpha = unlocked ? 0.92 : 0.42;
-          ctx.drawImage(GRASS_IMAGE, x - game.cellW * 0.48, y - game.cellH * 0.43,
+          ctx.globalAlpha = 0.96;
+          ctx.drawImage(socketImage, x - game.cellW * 0.48, y - game.cellH * 0.43,
             game.cellW * 0.96, game.cellH * 0.86);
           ctx.restore();
         } else {
@@ -658,4 +678,4 @@ function drawGame(ctx, game) {
   ctx.restore();
 }
 
-module.exports = { drawGame, setGrassImage, PALETTE };
+module.exports = { drawGame, setGrassImage, setBattleAssets, PALETTE };
