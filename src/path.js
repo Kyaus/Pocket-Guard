@@ -1,16 +1,15 @@
 // 地图道路使用格子坐标，绘制、建造约束和敌人移动共享同一份数据。
-const ROAD_CELLS = [
-  [0, 0], [1, 0], [2, 0], [3, 0], [4, 0],
-  [4, 1], [4, 2], [3, 2], [2, 2], [1, 2], [0, 2],
-  [0, 3], [0, 4], [1, 4], [2, 4], [3, 4], [4, 4]
-];
+const { GRID } = require('./levels');
 
-function createPath(top, bottom, cellHeight) {
-  const points = ROAD_CELLS.map(([col, row]) => ({
-    x: 55 + col * 70,
+function createPath(roadCells, layout = GRID, top = layout.top, cellHeight = layout.maxHeight / layout.rows) {
+  const cellWidth = layout.width / layout.cols;
+  const center = ([col, row]) => ({
+    x: layout.left + (col + 0.5) * cellWidth,
     y: top + (row + 0.5) * cellHeight
-  }));
-  return [{ x: 55, y: top - 18 }, ...points, { x: 335, y: bottom + 20 }];
+  });
+  const points = roadCells.map(center);
+  return [{ x: points[0].x, y: top - 18 }, ...points,
+    { x: points[points.length - 1].x, y: top + layout.rows * cellHeight + 20 }];
 }
 
 function pathLength(points) {
@@ -44,4 +43,4 @@ function advanceEnemy(enemy, points, distance) {
   return enemy.segment === points.length - 1;
 }
 
-module.exports = { ROAD_CELLS, createPath, pathLength, advanceEnemy };
+module.exports = { createPath, pathLength, advanceEnemy };

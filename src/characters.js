@@ -45,12 +45,14 @@ function face(ctx, eyeColor) {
   ctx.stroke();
 }
 
-function drawGuardian(ctx, x, y, type, small = false, time = 0, attackAge = Infinity, aimAngle = -Math.PI / 4) {
+function drawGuardian(ctx, x, y, type, small = false, time = 0, attackAge = Infinity,
+  aimAngle = -Math.PI / 4, level = 1, scaleOverride = null) {
   const colors = GUARDIANS[type];
   const pose = attackPose(type, small ? Infinity : attackAge, aimAngle);
   ctx.save();
   ctx.translate(x, y);
-  if (small) ctx.scale(0.62, 0.62);
+  const bodyScale = scaleOverride || (small ? 0.52 : 0.78);
+  ctx.scale(bodyScale, bodyScale);
   oval(ctx, 0, 22, 21, 5, 'rgba(48,75,57,0.2)', false);
   const bob = small ? 0 : Math.sin(time * 3 + type) * 0.7;
   ctx.translate(0, bob);
@@ -72,6 +74,14 @@ function drawGuardian(ctx, x, y, type, small = false, time = 0, attackAge = Infi
   shape(ctx, [[-16, -23], [-9, -31], [8, -29], [16, -21], [10, -13],
     [6, -23], [0, -15], [-3, -24], [-10, -15], [-10, -23]], colors.hair);
   face(ctx, type === 2 ? '#627bc0' : '#65594e');
+  if (level >= 2) {
+    oval(ctx, -12, 2, 5, 3, '#e5c16d');
+    oval(ctx, 12, 2, 5, 3, '#e5c16d');
+  }
+  if (level >= 3) {
+    shape(ctx, [[-12, 7], [-23, 22], [-13, 19], [-6, 8]], '#edcf81');
+    oval(ctx, 0, 6, 3, 3, type === 2 ? '#b0ecff' : '#ffecaa');
+  }
   if (type === 0) {
     shape(ctx, [[-18, -26], [-13, -35], [6, -35], [15, -27]], colors.outfit);
     shape(ctx, [[-18, -26], [18, -26], [13, -22], [-17, -22]], '#4a896a');
@@ -146,13 +156,14 @@ function drawGuardian(ctx, x, y, type, small = false, time = 0, attackAge = Infi
   ctx.restore();
 }
 
-function drawMonster(ctx, enemy, time) {
+function drawMonster(ctx, enemy, time, scaleOverride = 0.78) {
   ctx.save();
   ctx.translate(enemy.x, enemy.y);
+  ctx.scale(scaleOverride, scaleOverride);
   const bounce = Math.sin(time * (enemy.kind === 1 ? 12 : 7) + enemy.progress / 25);
   oval(ctx, 0, 16, enemy.kind === 2 ? 19 : 14, 4, 'rgba(83,68,55,0.18)', false);
   ctx.translate(0, bounce * 1.7);
-  const color = enemy.slow > 0 ? '#a9e6f6' : ['#d891c0', '#f1bc6b', '#8caf97'][enemy.kind];
+  const color = enemy.hitFlash > 0 ? '#ffffff' : enemy.slow > 0 ? '#a9e6f6' : ['#d891c0', '#f1bc6b', '#8caf97'][enemy.kind];
   if (enemy.kind === 0) {
     // 软软的史莱姆：水滴头顶、圆润底部和小触角。
     ctx.beginPath();
