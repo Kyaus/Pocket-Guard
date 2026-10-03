@@ -11,7 +11,9 @@ const game = new Game(390, info.windowHeight / scale, {
   readBest: () => { try { return Number(wx.getStorageSync('guardian-best')) || 0; } catch (_) { return 0; } },
   saveBest: value => { try { wx.setStorageSync('guardian-best', value); } catch (_) {} },
   readUnlockedLevel: () => { try { return Number(wx.getStorageSync('guardian-unlocked-level')) || 1; } catch (_) { return 1; } },
-  saveUnlockedLevel: value => { try { wx.setStorageSync('guardian-unlocked-level', value); } catch (_) {} }
+  saveUnlockedLevel: value => { try { wx.setStorageSync('guardian-unlocked-level', value); } catch (_) {} },
+  readGrass: () => { try { return wx.getStorageSync('guardian-grass') || {}; } catch (_) { return {}; } },
+  saveGrass: value => { try { wx.setStorageSync('guardian-grass', value); } catch (_) {} }
 });
 wx.onTouchStart(event => {
   const touch = event.touches[0];

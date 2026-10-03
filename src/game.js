@@ -14,6 +14,7 @@ class Game {
       Number(storage.readUnlockedLevel ? storage.readUnlockedLevel() : 1) || 1));
     this.profile = storage.readProfile ? storage.readProfile() : { name: '守卫学徒', level: 1, avatarType: 2 };
     this.wallet = storage.readWallet ? storage.readWallet() : { coins: 1200, gems: 20 };
+    this.grassByLevel = storage.readGrass ? (storage.readGrass() || Object.create(null)) : Object.create(null);
     this.level = 1;
     this.reset();
   }
@@ -21,8 +22,9 @@ class Game {
     this.time = 0;
     this.state = 'menu'; this.coins = 150; this.hp = 20; this.wave = 0;
     this.damage = 1; this.range = 1; this.rate = 1; this.selected = 0;
-    this.selectedTower = null;
+    this.selectedTower = null; this.selectedGrass = null;
     this.towers = []; this.enemies = []; this.effects = []; this.projectiles = []; this.pending = 0;
+    this.spawned = 0; this.waveMarkers = [];
     this.notice = '选择守卫，点击草地格子建造'; this.noticeTime = 5;
     this.configureLayout(getLevel(this.level));
   }
@@ -34,6 +36,16 @@ class Game {
     this.cellW = GRID.width / GRID.cols;
     this.characterScale = Math.min(GRID.characterScale, this.cellH / 52);
     this.roadCells = level.roadCells;
+    this.grassUnlockCost = level.grassUnlockCost || 40;
+    const initialGrass = (level.initialGrass || []).map(([col, row]) => `${col},${row}`);
+    if (this.grassByLevel[level.id] instanceof Set) {
+      // 直接从同一局实例继续游戏时复用已开垦草坪。
+    } else if (Array.isArray(this.grassByLevel[level.id])) {
+      this.grassByLevel[level.id] = new Set(this.grassByLevel[level.id]);
+    } else {
+      this.grassByLevel[level.id] = new Set(initialGrass);
+    }
+    this.unlockedGrass = this.grassByLevel[level.id];
     this.path = createPath(this.roadCells, GRID, this.top, this.cellH);
     this.pathLength = pathLength(this.path);
   }
@@ -54,11 +66,14 @@ class Game {
     this.rate = 1;
     this.selected = 0;
     this.selectedTower = null;
+    this.selectedGrass = null;
     this.towers = [];
     this.enemies = [];
     this.effects = [];
     this.projectiles = [];
     this.pending = 0;
+    this.spawned = 0;
+    this.waveMarkers = [];
     this.notice = '选择守卫，点击草地格子建造';
     this.noticeTime = 5;
     this.configureLayout(getLevel(id));
@@ -69,6 +84,7 @@ class Game {
     this.enemies = [];
     this.projectiles = [];
     this.effects = [];
+    this.selectedGrass = null;
   }
   enterLevelSelect() {
     this.state = 'levelSelect';
@@ -77,6 +93,7 @@ class Game {
     this.projectiles = [];
     this.effects = [];
     this.pending = 0;
+    this.selectedGrass = null;
   }
   openHomeFeature(feature) {
     this.feature = feature;
@@ -86,23 +103,34 @@ class Game {
   message(text) { this.notice = text; this.noticeTime = 2.5; }
   startWave() {
     if (this.state !== 'ready') return;
+    this.selectedTower = null;
+    this.selectedGrass = null;
     this.wave++;
     this.waveTotal = 5 + this.level + this.wave * 2;
     this.pending = this.waveTotal;
+    this.spawned = 0;
+    const eliteAt = Math.max(1, Math.floor(this.waveTotal * 0.48));
+    this.waveMarkers = this.wave >= 2 ? [{ kind: 'elite', index: eliteAt }] : [];
+    if (this.wave === this.levelConfig.waves) {
+      this.waveMarkers.push({ kind: 'boss', index: this.waveTotal - 1 });
+    } else if (this.wave >= 5) {
+      this.waveMarkers.push({ kind: 'elite', index: Math.max(eliteAt + 1, Math.floor(this.waveTotal * 0.78)) });
+    }
     this.spawnTimer = 0;
     this.state = 'battle'; this.message('第 ' + this.wave + ' 波来袭');
   }
   spawn() {
     const index = this.waveTotal - this.pending;
-    const heavyFrequency = Math.max(3, 6 - this.level);
-    const kind = index % heavyFrequency === heavyFrequency - 1 ? 2 : index % 3 === 2 ? 1 : 0;
-    const hp = (kind === 2 ? 90 : kind === 1 ? 30 : 45) *
+    const marker = this.waveMarkers.find(item => item.index === index);
+    const kind = marker ? (marker.kind === 'boss' ? 3 : 2) : index % 3 === 2 ? 1 : 0;
+    const hp = (kind === 3 ? 420 : kind === 2 ? 150 : kind === 1 ? 30 : 45) *
       (1 + (this.wave - 1) * 0.23) * this.levelConfig.enemyHpMultiplier;
     this.enemies.push({ x: this.path[0].x, y: this.path[0].y, hp, maxHp: hp,
       segment: 0, progress: 0,
-      speed: (kind === 1 ? 85 : kind === 2 ? 43 : 58) * this.levelConfig.enemySpeedMultiplier,
+      speed: (kind === 1 ? 85 : kind === 3 ? 30 : kind === 2 ? 43 : 58) * this.levelConfig.enemySpeedMultiplier,
       kind, slow: 0, slowFactor: 1, dead: false });
     this.pending--;
+    this.spawned++;
   }
   finishWave() {
     this.coins += 30; this.best = Math.max(this.best, this.wave);
@@ -141,7 +169,10 @@ class Game {
       const slowedTime = Math.min(e.slow, dt);
       const distance = e.speed * (slowedTime * e.slowFactor + dt - slowedTime);
       e.slow = Math.max(0, e.slow - dt);
-      if (advanceEnemy(e, this.path, distance)) { e.dead = true; this.hp -= e.kind === 2 ? 2 : 1; }
+      if (advanceEnemy(e, this.path, distance)) {
+        e.dead = true;
+        this.hp -= e.kind === 3 ? 5 : e.kind === 2 ? 2 : 1;
+      }
     }
     if (this.hp <= 0) { this.hp = 0; this.state = 'lose'; return; }
     for (const tower of this.towers) {
@@ -184,9 +215,27 @@ class Game {
       value: Math.round(damage), life: 0.65, duration: 0.65 });
     if (enemy.hp <= 0) {
       enemy.dead = true;
-      this.coins += enemy.kind === 2 ? 12 : 7;
+      this.coins += enemy.kind === 3 ? 80 : enemy.kind === 2 ? 20 : 7;
       this.effects.push({ kind: 'death', x: enemy.x, y: enemy.y, life: 0.45, duration: 0.45 });
     }
+  }
+  grassKey(col, row) { return `${col},${row}`; }
+  isGrassUnlocked(col, row) {
+    return this.unlockedGrass && this.unlockedGrass.has(this.grassKey(col, row));
+  }
+  unlockGrass() {
+    if (!this.selectedGrass) return;
+    const { col, row } = this.selectedGrass;
+    if (this.isGrassUnlocked(col, row)) { this.selectedGrass = null; return; }
+    if (this.coins < this.grassUnlockCost) { this.message('金币不足，无法开垦草坪'); return; }
+    this.coins -= this.grassUnlockCost;
+    this.unlockedGrass.add(this.grassKey(col, row));
+    if (this.storage.saveGrass) {
+      const saved = Object.fromEntries(Object.entries(this.grassByLevel).map(([id, cells]) => [id, Array.from(cells)]));
+      this.storage.saveGrass(saved);
+    }
+    this.selectedGrass = null;
+    this.message('草坪已开垦，可以放置守卫');
   }
   updateProjectiles(dt) {
     this.projectiles = this.projectiles.filter(projectile => {
@@ -286,6 +335,16 @@ class Game {
         }
       }); return;
     }
+    if (this.selectedGrass && y >= this.h - 140 && y <= this.h - 94) {
+      if (x >= 25 && x <= 185) this.unlockGrass();
+      else if (x >= 330 && x <= 375) this.selectedGrass = null;
+      return;
+    }
+    if (this.selectedGrass && x >= 330 && x <= 375 && y >= this.h - 210 && y <= this.h - 168) {
+      this.selectedGrass = null;
+      return;
+    }
+    if (this.selectedGrass && y >= this.h - 210 && y <= this.h - 87) return;
     if (this.selectedTower && y >= this.h - 140 && y <= this.h - 94) {
       if (x >= 25 && x <= 185) this.upgradeTower();
       else if (x >= 205 && x <= 365) this.sellTower();
@@ -307,6 +366,13 @@ class Game {
     if (this.roadCells.some(([c, r]) => c === col && r === row)) { this.message('道路上不能建造'); return; }
     const existing = this.towers.find(t => t.col === col && t.row === row);
     if (existing) { this.selectedTower = existing; return; }
+    if (!this.isGrassUnlocked(col, row)) {
+      this.selectedTower = null;
+      this.selectedGrass = { col, row };
+      this.message(`开垦这块草坪需要 ${this.grassUnlockCost} 金币`);
+      return;
+    }
+    this.selectedGrass = null;
     this.selectedTower = null;
     const type = TYPES[this.selected];
     if (this.coins < type.cost) { this.message('金币不足，击败敌人可获得金币'); return; }

@@ -103,6 +103,35 @@ function battlefield(ctx, game) {
   ctx.beginPath();
   ctx.rect(16, game.top - 6, 358, game.bottom - game.top + 39);
   ctx.clip();
+  const terrain = ctx.createLinearGradient(0, game.top, 0, game.bottom);
+  terrain.addColorStop(0, '#6fb878');
+  terrain.addColorStop(0.52, '#4f9a68');
+  terrain.addColorStop(1, '#2f7155');
+  ctx.fillStyle = terrain;
+  ctx.fillRect(16, game.top - 6, 358, game.bottom - game.top + 39);
+  // 两侧溪流、林缘和岩石让战场从“棋盘格”变成森林场景。
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(27, game.top - 18);
+  ctx.bezierCurveTo(53, game.top + 90, 20, game.top + 190, 43, game.bottom + 25);
+  ctx.strokeStyle = '#286d79'; ctx.lineWidth = 17; ctx.stroke();
+  ctx.strokeStyle = '#64c6b5'; ctx.lineWidth = 9; ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(363, game.top - 5);
+  ctx.bezierCurveTo(337, game.top + 125, 373, game.top + 245, 350, game.bottom + 15);
+  ctx.strokeStyle = '#2c7780'; ctx.lineWidth = 12; ctx.stroke();
+  ctx.strokeStyle = '#6bd0b2'; ctx.lineWidth = 5; ctx.stroke();
+  const forest = [
+    [34, game.top + 33, 0.34], [359, game.top + 42, 0.38],
+    [37, game.top + 154, 0.27], [355, game.top + 210, 0.31],
+    [32, game.bottom - 20, 0.34], [360, game.bottom - 42, 0.3]
+  ];
+  forest.forEach(([x, y, scale], index) => drawTree(ctx, x, y, scale, index % 2 ? '#1f5b47' : '#285f4b'));
+  for (let i = 0; i < 8; i++) {
+    const x = 55 + (i * 43) % 285;
+    const y = game.top + 18 + (i * 79) % Math.max(80, game.bottom - game.top - 35);
+    circle(ctx, x, y, 4 + (i % 2), i % 2 ? '#d6bc6b' : '#6a9c5a', false);
+  }
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
   const roadOuter = Math.max(24, game.cellW * GRID.roadWidth);
@@ -126,10 +155,19 @@ function battlefield(ctx, game) {
       if (game.roadCells.some(([c, r]) => c === col && r === row)) {
         panel(ctx, x - game.cellW * 0.16, y - 3, game.cellW * 0.32, 6, '#dfbd7e', 3, null);
       } else {
+        const unlocked = game.isGrassUnlocked(col, row);
+        const selected = game.selectedGrass && game.selectedGrass.col === col && game.selectedGrass.row === row;
         panel(ctx, x - game.cellW / 2 + 2, y - game.cellH / 2 + 2,
-          game.cellW - 4, game.cellH - 4, (row + col) % 2 ? '#a9d078' : '#b4d982', 9, '#90b66b');
-        if (!game.towers.some(t => t.col === col && t.row === row)) {
+          game.cellW - 4, game.cellH - 4,
+          unlocked ? ((row + col) % 2 ? '#83c878' : '#94d181') : '#527f5b',
+          9, selected ? '#ffe38d' : unlocked ? '#6eae69' : '#3c6850');
+        if (!unlocked) {
+          circle(ctx, x, y - 2, Math.min(10, game.cellH * 0.22), '#355947');
+          label(ctx, '锁', x, y + 3, Math.min(11, game.cellH * 0.28), '#e9d58e');
+          label(ctx, game.grassUnlockCost + '金', x, y + Math.min(21, game.cellH * 0.42), 8, '#ffe39c');
+        } else if (!game.towers.some(t => t.col === col && t.row === row)) {
           label(ctx, '+', x, y + Math.min(7, game.cellH * 0.2), Math.min(18, game.cellH * 0.48), '#719752');
+          if ((row * GRID.cols + col) % 7 === 0) drawTree(ctx, x + game.cellW * 0.25, y + game.cellH * 0.2, 0.11, '#3d8d58');
         }
         // 花草位置由格子索引决定，避免每帧随机造成闪烁。
         circle(ctx, x + game.cellW * 0.38, y + game.cellH * 0.36, 1.5,
@@ -236,6 +274,20 @@ function drawTowerPanel(ctx, game) {
   label(ctx, maxed ? '已满级' : '升级 ' + cost + ' 金', 105, game.h - 111, 16, UI.text);
   uiPanel(ctx, 205, game.h - 140, 160, 46, '#754f43', 10);
   label(ctx, '出售 +' + sellValue(tower) + ' 金', 285, game.h - 111, 16, UI.text);
+}
+
+function drawGrassPanel(ctx, game) {
+  const y = game.h - 210;
+  uiPanel(ctx, 15, y, 360, 123, UI.panel, 14);
+  label(ctx, '开垦草坪', 30, y + 28, 19, UI.text, 'left');
+  label(ctx, '解锁后才能在这里放置守卫', 30, y + 53, 12, UI.muted, 'left');
+  label(ctx, `需要 ${game.grassUnlockCost} 金币`, 30, y + 75, 14, UI.gold, 'left');
+  label(ctx, '×', 352, y + 27, 24, UI.gold);
+  uiPanel(ctx, 25, game.h - 140, 160, 46,
+    game.coins < game.grassUnlockCost ? '#46504d' : '#477655', 10);
+  label(ctx, '开垦草坪', 105, game.h - 111, 16, UI.text);
+  uiPanel(ctx, 205, game.h - 140, 160, 46, '#46504d', 10);
+  label(ctx, '稍后再说', 285, game.h - 111, 16, UI.muted);
 }
 
 function resourcePill(ctx, x, y, width, icon, value, color) {
@@ -519,6 +571,25 @@ function drawOverlay(ctx, game) {
   label(ctx, '选地图', 285, center + 77, 17, PALETTE.ink);
 }
 
+function drawWaveProgress(ctx, game) {
+  const x = 18; const y = 127; const width = 354; const height = 11;
+  const total = Math.max(1, game.waveTotal || 1);
+  const spawned = Math.max(0, total - (game.pending || 0));
+  panel(ctx, x, y, width, height, '#1d3038', 6, null);
+  panel(ctx, x + 2, y + 2, Math.max(3, (width - 4) * Math.min(1, spawned / total)), height - 4,
+    game.wave === game.levelConfig.waves ? '#d78862' : '#77bc7e', 5, null);
+  (game.waveMarkers || []).forEach(marker => {
+    const markerX = x + (marker.index / total) * width;
+    const reached = spawned > marker.index;
+    circle(ctx, markerX, y + height / 2, 9, reached ? '#d4a54d' : '#314d53');
+    ctx.strokeStyle = reached ? '#fff0a5' : '#9cae8e';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    label(ctx, marker.kind === 'boss' ? '王' : '精', markerX, y + 15, 8, reached ? '#fff8d1' : '#d7e3ba');
+  });
+  label(ctx, game.wave ? `${spawned}/${total}` : '准备', 195, 137, 9, UI.text);
+}
+
 function drawGame(ctx, game) {
   if (game.state === 'menu') {
     drawMainMenu(ctx, game);
@@ -545,6 +616,7 @@ function drawGame(ctx, game) {
     uiPanel(ctx, 16 + index * 122, 91, 114, 33, [UI.red, '#806a32', '#356174'][index], 12);
     label(ctx, value, 73 + index * 122, 113, 15, UI.text);
   });
+  drawWaveProgress(ctx, game);
   battlefield(ctx, game);
   label(ctx, game.noticeTime > 0 ? game.notice : TYPES[game.selected].description, 195, game.h - 166, 11);
   TYPES.forEach((type, index) => {
@@ -554,7 +626,8 @@ function drawGame(ctx, game) {
     label(ctx, type.name, x + 74, game.h - 129, 14, UI.text);
     label(ctx, type.cost + ' 金', x + 74, game.h - 108, 13, game.coins < type.cost ? '#e58b78' : UI.gold);
   });
-  if (game.selectedTower) drawTowerPanel(ctx, game);
+  if (game.selectedGrass) drawGrassPanel(ctx, game);
+  else if (game.selectedTower) drawTowerPanel(ctx, game);
   const ready = game.state === 'ready';
   uiPanel(ctx, 20, game.h - 72, 350, 50, ready ? '#477655' : UI.panelDeep, 14);
   label(ctx, ready ? (game.wave === 0 ? '出发！守护小镇' : '迎接下一波') : '守卫中 · 可继续建造',

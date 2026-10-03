@@ -233,7 +233,13 @@ test('长屏幕上每个可建造格子的冰霜塔都能攻击相邻道路', ()
         const game = new Game(390, height);
         game.startLevel(1);
         game.selected = 2;
-        game.touch(GRID.left + (col + 0.5) * game.cellW, game.top + (row + 0.5) * game.cellH);
+        const cellX = GRID.left + (col + 0.5) * game.cellW;
+        const cellY = game.top + (row + 0.5) * game.cellH;
+        game.touch(cellX, cellY);
+        if (game.selectedGrass) {
+          game.touch(105, game.h - 115);
+          game.touch(cellX, cellY);
+        }
         const tower = game.towers[0];
         const nearest = game.path.slice(1, -1).reduce((best, point) =>
           Math.hypot(point.x - tower.x, point.y - tower.y) < Math.hypot(best.x - tower.x, best.y - tower.y) ? point : best);
@@ -258,6 +264,33 @@ test('建造扣费，禁止在道路和重复格子建造', () => {
   game.touch(55, game.top + game.cellH * 1.5);
   assert.equal(game.towers.length, 1);
   assert.equal(game.coins, 105);
+});
+
+test('锁定草坪需要先付费开垦，开垦后才能建塔', () => {
+  const game = new Game(390, 844);
+  game.startLevel(1);
+  const col = 4, row = 1;
+  const x = GRID.left + (col + 0.5) * game.cellW;
+  const y = game.top + (row + 0.5) * game.cellH;
+  assert.equal(game.isGrassUnlocked(col, row), false);
+  game.touch(x, y);
+  assert.ok(game.selectedGrass);
+  game.touch(105, game.h - 115);
+  assert.equal(game.isGrassUnlocked(col, row), true);
+  assert.equal(game.coins, 150 - game.grassUnlockCost);
+  game.touch(x, y);
+  assert.equal(game.towers.length, 1);
+});
+
+test('最后一波固定刷新首领，中间波次按进度刷新精英怪', () => {
+  const game = new Game(390, 844);
+  game.startLevel(1);
+  game.wave = game.levelConfig.waves - 1;
+  game.startWave();
+  while (game.pending > 0) game.spawn();
+  assert.ok(game.waveMarkers.some(marker => marker.kind === 'boss'));
+  assert.equal(game.enemies[game.enemies.length - 1].kind, 3);
+  assert.ok(game.enemies.some(enemy => enemy.kind === 2));
 });
 
 test('成功清空波次后进入升级，保存最佳波次', () => {

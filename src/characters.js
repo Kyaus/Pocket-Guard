@@ -161,9 +161,9 @@ function drawMonster(ctx, enemy, time, scaleOverride = 0.78) {
   ctx.translate(enemy.x, enemy.y);
   ctx.scale(scaleOverride, scaleOverride);
   const bounce = Math.sin(time * (enemy.kind === 1 ? 12 : 7) + enemy.progress / 25);
-  oval(ctx, 0, 16, enemy.kind === 2 ? 19 : 14, 4, 'rgba(83,68,55,0.18)', false);
+  oval(ctx, 0, 16, enemy.kind >= 2 ? enemy.kind === 3 ? 27 : 19 : 14, 4, 'rgba(83,68,55,0.18)', false);
   ctx.translate(0, bounce * 1.7);
-  const color = enemy.hitFlash > 0 ? '#ffffff' : enemy.slow > 0 ? '#a9e6f6' : ['#d891c0', '#f1bc6b', '#8caf97'][enemy.kind];
+  const color = enemy.hitFlash > 0 ? '#ffffff' : enemy.slow > 0 ? '#a9e6f6' : ['#d891c0', '#f1bc6b', '#8caf97', '#8c72c8'][enemy.kind];
   if (enemy.kind === 0) {
     // 软软的史莱姆：水滴头顶、圆润底部和小触角。
     ctx.beginPath();
@@ -189,7 +189,7 @@ function drawMonster(ctx, enemy, time, scaleOverride = 0.78) {
     oval(ctx, 7, 13 - bounce, 5, 4, '#ac7550');
     oval(ctx, 0, 0, 15, 14, color);
     oval(ctx, 0, 6, 8, 6, '#fff0cd', false);
-  } else {
+  } else if (enemy.kind === 2) {
     // 重甲独角怪：壮实体型、獠牙和腹部装甲。
     oval(ctx, -10, 16, 7, 5, '#587761');
     oval(ctx, 10, 16, 7, 5, '#587761');
@@ -199,8 +199,15 @@ function drawMonster(ctx, enemy, time, scaleOverride = 0.78) {
     shape(ctx, [[-6, -14], [0, -29], [7, -13]], '#fff0cc');
     shape(ctx, [[-13, 7], [13, 7], [10, 18], [-10, 18]], '#8b9fab');
     oval(ctx, 0, 12, 3, 3, '#d2dde0', false);
+  } else {
+    // 首领怪：更大的体型、王冠和披风，作为最后一波的视觉焦点。
+    shape(ctx, [[-24, 2], [-34, 24], [-16, 20], [0, 30], [16, 20], [34, 24], [24, 2]], '#594678');
+    oval(ctx, 0, 1, 28, 23, color);
+    shape(ctx, [[-17, -20], [-8, -34], [0, -23], [9, -35], [18, -19]], '#e4b45f');
+    shape(ctx, [[-12, -18], [12, -18], [17, 4], [0, 15], [-17, 4]], '#a883d4');
+    oval(ctx, 0, 8, 8, 4, '#52385f', false);
   }
-  const eyeY = enemy.kind === 0 ? 1 : -3;
+  const eyeY = enemy.kind === 0 ? 1 : enemy.kind === 3 ? -3 : -3;
   for (const x of [-6, 6]) {
     oval(ctx, x, eyeY, 4, 5, '#fffdf1', false);
     oval(ctx, x, eyeY + 1, 2, 3, '#3c4657', false);
@@ -214,11 +221,12 @@ function drawMonster(ctx, enemy, time, scaleOverride = 0.78) {
   if (enemy.slow > 0) {
     shape(ctx, [[-18, 6], [-22, 12], [-18, 18], [-14, 12]], '#d7faff');
   }
-  const barY = enemy.kind === 2 ? -36 : enemy.kind === 1 ? -32 : -29;
+  const barY = enemy.kind === 3 ? -49 : enemy.kind === 2 ? -36 : enemy.kind === 1 ? -32 : -29;
   shape(ctx, [[-18, barY], [18, barY], [18, barY + 5], [-18, barY + 5]], '#fff4df');
   const health = Math.max(0, Math.min(1, enemy.hp / enemy.maxHp));
   ctx.fillStyle = '#76be80';
   ctx.fillRect(-17, barY + 1, 34 * health, 3);
+  if (enemy.kind === 3) label(ctx, 'BOSS', 0, barY - 6, 9, '#ffe7a0');
   ctx.restore();
 }
 
