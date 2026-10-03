@@ -9,6 +9,19 @@ const PALETTE = {
   ink: '#38513d', cream: '#fff8df', grass: '#b8db85', path: '#eccc90',
   green: '#69b96b', shadow: '#48804c', muted: '#758268'
 };
+const UI = {
+  background: '#172331',
+  panel: '#293944',
+  panelDeep: '#202e39',
+  panelGreen: '#355a4c',
+  wood: '#825b3c',
+  woodDark: '#4e382d',
+  gold: '#e9b951',
+  text: '#fff1c9',
+  muted: '#a9b7b1',
+  blue: '#73a9c9',
+  red: '#bd735f'
+};
 
 function panel(ctx, x, y, width, height, fill, radius = 12, stroke = PALETTE.ink) {
   const r = Math.min(radius, width / 2, height / 2);
@@ -48,6 +61,25 @@ function circle(ctx, x, y, radius, fill, outline = true) {
     ctx.lineWidth = 2;
     ctx.stroke();
   }
+}
+
+function backArrow(ctx, x = 28, y = 48) {
+  ctx.save();
+  ctx.strokeStyle = UI.gold;
+  ctx.fillStyle = UI.gold;
+  ctx.lineWidth = 4;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(x + 9, y - 10);
+  ctx.lineTo(x - 3, y);
+  ctx.lineTo(x + 9, y + 10);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function uiPanel(ctx, x, y, width, height, fill = UI.panel, radius = 14) {
+  panel(ctx, x + 2, y + 4, width, height, UI.woodDark, radius, null);
+  panel(ctx, x, y, width, height, fill, radius, UI.wood);
 }
 
 function battlefield(ctx, game) {
@@ -176,62 +208,71 @@ function drawTowerPanel(ctx, game) {
   const stats = towerStats(tower, game);
   const y = game.h - 210;
   const cost = upgradeCost(tower);
-  panel(ctx, 15, y, 360, 123, PALETTE.cream, 14);
-  label(ctx, stats.name + '  Lv.' + tower.level, 30, y + 25, 18, PALETTE.ink, 'left');
-  label(ctx, '×', 352, y + 25, 24);
+  uiPanel(ctx, 15, y, 360, 123, UI.panel, 14);
+  label(ctx, stats.name + '  Lv.' + tower.level, 30, y + 25, 18, UI.text, 'left');
+  label(ctx, '×', 352, y + 25, 24, UI.gold);
   label(ctx, `伤害 ${Math.round(stats.damage)} · 射程 ${Math.round(stats.range)} · 间隔 ${stats.interval.toFixed(2)}秒`,
-    30, y + 48, 12, PALETTE.muted, 'left');
+    30, y + 48, 12, UI.muted, 'left');
   const specialty = tower.type === 0 ? '升级强化单体伤害与攻速' : tower.type === 1 ? `爆炸范围 ${stats.blastRadius} · 升级强化范围伤害` :
     `减速 ${Math.round((1 - stats.slowFactor) * 100)}% / ${stats.slowDuration}秒`;
-  label(ctx, specialty, 30, y + 64, 12, PALETTE.muted, 'left');
+  label(ctx, specialty, 30, y + 64, 12, UI.muted, 'left');
   const maxed = tower.level >= MAX_LEVEL;
-  panel(ctx, 25, game.h - 140, 160, 46, maxed || game.coins < cost ? '#d7ddc7' : '#86c784', 10);
-  label(ctx, maxed ? '已满级' : '升级 ' + cost + ' 金', 105, game.h - 111, 16);
-  panel(ctx, 205, game.h - 140, 160, 46, '#f2c2a1', 10);
-  label(ctx, '出售 +' + sellValue(tower) + ' 金', 285, game.h - 111, 16);
+  uiPanel(ctx, 25, game.h - 140, 160, 46, maxed || game.coins < cost ? '#46504d' : '#477655', 10);
+  label(ctx, maxed ? '已满级' : '升级 ' + cost + ' 金', 105, game.h - 111, 16, UI.text);
+  uiPanel(ctx, 205, game.h - 140, 160, 46, '#754f43', 10);
+  label(ctx, '出售 +' + sellValue(tower) + ' 金', 285, game.h - 111, 16, UI.text);
 }
 
 function drawMainMenu(ctx, game) {
-  ctx.fillStyle = '#edf4d9';
+  ctx.fillStyle = UI.background;
   ctx.fillRect(0, 0, game.w, game.h);
-  panel(ctx, 14, 14, 362, 96, PALETTE.cream, 18);
-  circle(ctx, 58, 62, 31, '#cfe8a7');
+  for (let i = 0; i < 18; i++) {
+    circle(ctx, 12 + (i * 73) % 380, 120 + (i * 97) % Math.max(1, game.h - 150), 1.5, i % 2 ? '#4b654e' : '#6b6042', false);
+  }
+  uiPanel(ctx, 14, 14, 362, 96, UI.panel, 18);
+  circle(ctx, 58, 62, 31, '#304f4e');
+  ctx.strokeStyle = UI.gold; ctx.lineWidth = 3; ctx.stroke();
   drawGuardian(ctx, 58, 72, game.profile.avatarType || 2, false, game.time, Infinity, -0.55, 3, 0.5);
-  label(ctx, game.profile.name || '守卫学徒', 101, 48, 18, PALETTE.ink, 'left');
-  label(ctx, 'Lv.' + (game.profile.level || 1) + '  小镇守护者', 101, 72, 12, PALETTE.muted, 'left');
-  panel(ctx, 235, 32, 62, 27, '#ffedaf', 10);
-  label(ctx, '金币 ' + game.wallet.coins, 266, 51, 11, '#8c6c28');
-  panel(ctx, 302, 32, 62, 27, '#d7edf5', 10);
-  label(ctx, '钻石 ' + game.wallet.gems, 333, 51, 11, '#547690');
-  label(ctx, '今日任务：守住一波敌人', 235, 83, 11, PALETTE.muted, 'left');
-  panel(ctx, 14, 126, 362, 194, '#fff8df', 24);
-  circle(ctx, 195, 198, 51, '#cfe8a7');
+  label(ctx, game.profile.name || '守卫学徒', 101, 48, 18, UI.text, 'left');
+  label(ctx, 'Lv.' + (game.profile.level || 1) + '  小镇守护者', 101, 72, 12, UI.muted, 'left');
+  uiPanel(ctx, 230, 29, 67, 30, UI.panelDeep, 10);
+  label(ctx, '金币 ' + game.wallet.coins, 263, 49, 11, UI.gold);
+  uiPanel(ctx, 302, 29, 67, 30, UI.panelDeep, 10);
+  label(ctx, '钻石 ' + game.wallet.gems, 335, 49, 11, UI.blue);
+  label(ctx, '今日任务：守住一波敌人', 230, 84, 11, UI.muted, 'left');
+  uiPanel(ctx, 14, 126, 362, 194, UI.panelGreen, 24);
+  circle(ctx, 195, 198, 51, '#486d54');
+  ctx.strokeStyle = UI.gold; ctx.lineWidth = 2; ctx.stroke();
   drawGuardian(ctx, 171, 246, 0, false, game.time, Infinity, -0.55, 2);
   drawGuardian(ctx, 219, 246, 2, false, game.time, Infinity, -0.55, 1);
-  label(ctx, '口袋守卫', 195, 283, 24, PALETTE.ink);
-  label(ctx, '集结守卫，击退来袭的小怪兽', 195, 304, 12, PALETTE.muted);
+  label(ctx, '口袋守卫', 195, 283, 24, UI.text);
+  label(ctx, '集结守卫，击退来袭的小怪兽', 195, 304, 12, UI.muted);
   homeButtonLayout(game.h).forEach(button => {
     const selected = button.id === 'guardian';
-    panel(ctx, button.x, button.y + 4, button.width, button.height, '#a7b78d', 15, null);
-    panel(ctx, button.x, button.y, button.width, button.height, button.color, 15, selected ? PALETTE.ink : '#a0a77f');
-    circle(ctx, button.x + 32, button.y + button.height / 2, selected ? 25 : 22, '#fff8df');
-    label(ctx, button.icon, button.x + 32, button.y + button.height / 2 + 7, selected ? 24 : 20, PALETTE.ink);
-    label(ctx, button.name, button.x + 66, button.y + button.height / 2 - 2, selected ? 18 : 16, PALETTE.ink, 'left');
-    label(ctx, button.subtitle, button.x + 66, button.y + button.height / 2 + 19, 11, '#63735b', 'left');
-    if (selected) label(ctx, '›', button.x + button.width - 24, button.y + button.height / 2 + 8, 28, PALETTE.ink);
+    uiPanel(ctx, button.x, button.y, button.width, button.height,
+      selected ? '#456b52' : UI.panel, 15);
+    circle(ctx, button.x + 32, button.y + button.height / 2, selected ? 25 : 22, UI.panelDeep);
+    ctx.strokeStyle = selected ? UI.gold : '#637d78'; ctx.lineWidth = 2; ctx.stroke();
+    label(ctx, button.icon, button.x + 32, button.y + button.height / 2 + 7, selected ? 24 : 20, UI.gold);
+    label(ctx, button.name, button.x + 66, button.y + button.height / 2 - 2, selected ? 18 : 16, UI.text, 'left');
+    label(ctx, button.subtitle, button.x + 66, button.y + button.height / 2 + 19, 11, UI.muted, 'left');
+    if (selected) label(ctx, '›', button.x + button.width - 24, button.y + button.height / 2 + 8, 28, UI.gold);
   });
-  panel(ctx, 14, game.h - 62, 362, 44, '#d9e6c3', 14);
-  label(ctx, '大厅', 195, game.h - 33, 15, PALETTE.ink);
+  uiPanel(ctx, 14, game.h - 62, 362, 44, UI.panelDeep, 14);
+  label(ctx, '大厅', 120, game.h - 33, 14, UI.gold);
+  label(ctx, '英雄', 195, game.h - 33, 14, UI.muted);
+  label(ctx, '设置', 270, game.h - 33, 14, UI.muted);
 }
 
 function drawFeature(ctx, game) {
-  ctx.fillStyle = '#edf4d9';
+  ctx.fillStyle = UI.background;
   ctx.fillRect(0, 0, game.w, game.h);
-  panel(ctx, 14, 18, 362, 66, PALETTE.cream, 18);
-  label(ctx, '‹', 35, 61, 30, PALETTE.ink);
-  label(ctx, '功能预览', 195, 57, 24, PALETTE.ink);
-  panel(ctx, 26, 130, 338, 390, '#fff8df', 24);
-  circle(ctx, 195, 222, 55, '#cfe8a7');
+  uiPanel(ctx, 14, 18, 362, 66, UI.panel, 18);
+  backArrow(ctx, 35, 51);
+  label(ctx, '功能预览', 195, 57, 24, UI.text);
+  uiPanel(ctx, 26, 130, 338, 390, UI.panel, 24);
+  circle(ctx, 195, 222, 55, UI.panelGreen);
+  ctx.strokeStyle = UI.gold; ctx.lineWidth = 2; ctx.stroke();
   const title = { summon: '英雄抽取', expedition: '远征', shop: '商城', warehouse: '仓库' }[game.feature] || '功能';
   const desc = {
     summon: '收集不同职业的英雄，组成你的守卫队伍。',
@@ -239,43 +280,43 @@ function drawFeature(ctx, game) {
     shop: '未来可购买外观、资源和限时礼包。',
     warehouse: '查看已获得的英雄、装备和装饰。'
   }[game.feature] || '更多城镇功能正在准备中。';
-  label(ctx, title, 195, 315, 28, PALETTE.ink);
-  label(ctx, desc, 195, 350, 14, PALETTE.muted);
-  label(ctx, '即将开放', 195, 410, 22, '#9e8960');
-  label(ctx, '入口和资源结构已经预留，后续可以接入正式内容。', 195, 440, 12, PALETTE.muted);
-  panel(ctx, 64, 566, 262, 55, PALETTE.green, 16);
-  label(ctx, '返回大厅', 195, 601, 18, '#fffbea');
+  label(ctx, title, 195, 315, 28, UI.text);
+  label(ctx, desc, 195, 350, 14, UI.muted);
+  label(ctx, '即将开放', 195, 410, 22, UI.gold);
+  label(ctx, '入口和资源结构已经预留，后续可以接入正式内容。', 195, 440, 12, UI.muted);
+  uiPanel(ctx, 64, 566, 262, 55, UI.panelGreen, 16);
+  label(ctx, '返回大厅', 195, 601, 18, UI.text);
 }
 
 function drawLevelSelect(ctx, game) {
-  ctx.fillStyle = '#edf4d9';
+  ctx.fillStyle = UI.background;
   ctx.fillRect(0, 0, game.w, game.h);
-  label(ctx, '选择守护地图', 195, 66, 28, PALETTE.ink);
-  label(ctx, '完成前一关后解锁下一张地图', 195, 94, 13, PALETTE.muted);
+  backArrow(ctx, 28, 51);
+  label(ctx, '选择守护地图', 195, 66, 28, UI.text);
+  label(ctx, '完成前一关后解锁下一张地图', 195, 94, 13, UI.muted);
   LEVELS.forEach((level, index) => {
     const col = index % 2;
     const row = Math.floor(index / 2);
     const x = 20 + col * 180;
     const y = 130 + row * 124;
     const locked = level.id > game.unlockedLevel;
-    panel(ctx, x, y + 3, 165, 108, '#c0c89d', 16, null);
-    panel(ctx, x, y, 165, 108, locked ? '#d6d9c7' : '#fff8df', 16, locked ? '#aeb69e' : '#91a86e');
-    circle(ctx, x + 31, y + 32, 20, locked ? '#b6bdab' : level.color);
-    label(ctx, locked ? '锁' : String(level.id), x + 31, y + 39, 19, locked ? '#f4f5e9' : PALETTE.ink);
-    label(ctx, level.name, x + 58, y + 28, 16, locked ? '#8a9380' : PALETTE.ink, 'left');
-    label(ctx, level.subtitle, x + 58, y + 49, 11, locked ? '#969e8c' : PALETTE.muted, 'left');
-    label(ctx, `${level.waves} 波 · ${locked ? '完成前关卡解锁' : '可挑战'}`, x + 13, y + 88, 11, locked ? '#969e8c' : '#8b9a72', 'left');
+    uiPanel(ctx, x, y, 165, 108, locked ? '#303b40' : UI.panel, 16);
+    circle(ctx, x + 31, y + 32, 20, locked ? '#46504c' : level.color);
+    label(ctx, locked ? '锁' : String(level.id), x + 31, y + 39, 19, locked ? '#929b8f' : PALETTE.ink);
+    label(ctx, level.name, x + 58, y + 28, 16, locked ? '#929b8f' : UI.text, 'left');
+    label(ctx, level.subtitle, x + 58, y + 49, 11, locked ? '#7b8780' : UI.muted, 'left');
+    label(ctx, `${level.waves} 波 · ${locked ? '完成前关卡解锁' : '可挑战'}`, x + 13, y + 88, 11, locked ? '#7b8780' : UI.gold, 'left');
   });
-  panel(ctx, 52, game.h - 78, 286, 48, '#c9d6b5', 14);
-  label(ctx, '返回主页面', 195, game.h - 47, 17, PALETTE.ink);
+  uiPanel(ctx, 52, game.h - 78, 286, 48, UI.panelDeep, 14);
+  label(ctx, '返回主页面', 195, game.h - 47, 17, UI.text);
 }
 
 function drawOverlay(ctx, game) {
   const center = game.h / 2;
   ctx.fillStyle = 'rgba(41,65,47,0.65)';
   ctx.fillRect(0, 0, game.w, game.h);
-  panel(ctx, 290, 22, 82, 34, '#fff8df', 10);
-  label(ctx, '退出副本', 331, 45, 12, PALETTE.ink);
+  backArrow(ctx, 28, 50);
+  label(ctx, '退出副本', 52, 55, 12, UI.text, 'left');
   if (game.state === 'upgrade') {
     panel(ctx, 22, center - 188, 346, 350, PALETTE.cream, 22);
     label(ctx, '防守成功！', 195, center - 148, 27);
@@ -318,32 +359,30 @@ function drawGame(ctx, game) {
   ctx.save();
   ctx.fillStyle = '#edf4d9';
   ctx.fillRect(0, 0, game.w, game.h);
-  panel(ctx, 14, 17, 362, 62, PALETTE.cream, 18);
-  label(ctx, '口袋守卫', 31, 45, 25, PALETTE.ink, 'left');
-  label(ctx, `${game.levelConfig.name} · ${game.levelConfig.subtitle}`, 32, 66, 11, PALETTE.muted, 'left');
-  label(ctx, '最佳 ' + game.best + ' 波', 280, 51, 12, '#869155', 'right');
-  panel(ctx, 292, 29, 76, 34, '#d9e6c3', 10);
-  label(ctx, '退出副本', 330, 51, 11, PALETTE.ink);
+  uiPanel(ctx, 14, 17, 362, 62, UI.panel, 18);
+  backArrow(ctx, 30, 48);
+  label(ctx, '口袋守卫', 57, 45, 23, UI.text, 'left');
+  label(ctx, `${game.levelConfig.name} · ${game.levelConfig.subtitle}`, 57, 66, 11, UI.muted, 'left');
+  label(ctx, '最佳 ' + game.best + ' 波', 356, 45, 11, UI.gold, 'right');
   ['生命 ' + game.hp, '金币 ' + game.coins,
     '波次 ' + game.wave + '/' + game.levelConfig.waves].forEach((value, index) => {
-    panel(ctx, 16 + index * 122, 91, 114, 33, ['#ffe0d6', '#ffedaf', '#dcebc7'][index], 12);
-    label(ctx, value, 73 + index * 122, 113, 15);
+    uiPanel(ctx, 16 + index * 122, 91, 114, 33, [UI.red, '#806a32', '#356174'][index], 12);
+    label(ctx, value, 73 + index * 122, 113, 15, UI.text);
   });
   battlefield(ctx, game);
   label(ctx, game.noticeTime > 0 ? game.notice : TYPES[game.selected].description, 195, game.h - 166, 11);
   TYPES.forEach((type, index) => {
     const x = 15 + index * 120;
-    panel(ctx, x, game.h - 152, 112, 68, '#c0c89d', 12, null);
-    panel(ctx, x, game.h - 155, 112, 68, game.selected === index ? '#fff0b6' : PALETTE.cream, 12, game.selected === index ? '#cb9a43' : '#a0b17d');
+    uiPanel(ctx, x, game.h - 155, 112, 68, game.selected === index ? '#5e6747' : UI.panel, 12);
     drawGuardian(ctx, x + 24, game.h - 117, index, true);
-    label(ctx, type.name, x + 74, game.h - 129, 14);
-    label(ctx, type.cost + ' 金', x + 74, game.h - 108, 13, game.coins < type.cost ? '#bd705d' : '#997337');
+    label(ctx, type.name, x + 74, game.h - 129, 14, UI.text);
+    label(ctx, type.cost + ' 金', x + 74, game.h - 108, 13, game.coins < type.cost ? '#e58b78' : UI.gold);
   });
   if (game.selectedTower) drawTowerPanel(ctx, game);
   const ready = game.state === 'ready';
-  panel(ctx, 20, game.h - 68, 350, 50, ready ? PALETTE.shadow : '#9aa88b');
-  panel(ctx, 20, game.h - 72, 350, 50, ready ? PALETTE.green : '#c9d6b5');
-  label(ctx, ready ? (game.wave === 0 ? '出发！守护小镇' : '迎接下一波') : '守卫中 · 可继续建造', 195, game.h - 40, 18, ready ? '#fffbea' : '#63755b');
+  uiPanel(ctx, 20, game.h - 72, 350, 50, ready ? '#477655' : UI.panelDeep, 14);
+  label(ctx, ready ? (game.wave === 0 ? '出发！守护小镇' : '迎接下一波') : '守卫中 · 可继续建造',
+    195, game.h - 40, 18, ready ? UI.text : UI.muted);
   if (['upgrade', 'win', 'lose'].includes(game.state)) drawOverlay(ctx, game);
   ctx.restore();
 }

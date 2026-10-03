@@ -253,6 +253,7 @@ class Game {
       return;
     }
     if (this.state === 'levelSelect') {
+      if (x <= 65 && y >= 20 && y <= 82) { this.returnToMenu(); return; }
       if (y >= this.h - 85) { this.returnToMenu(); return; }
       const cardWidth = 165;
       const cardHeight = 108;
@@ -267,12 +268,13 @@ class Game {
       return;
     }
     if ((this.state === 'ready' || this.state === 'battle' || this.state === 'upgrade') &&
-      x >= 300 && x <= 375 && y >= 20 && y <= 82) {
+      x <= 65 && y >= 20 && y <= 82) {
       this.enterLevelSelect();
       return;
     }
     if (this.state === 'win' || this.state === 'lose') {
-      if (x >= 45 && x <= 220 && y > this.h / 2 + 40 && y < this.h / 2 + 100) this.startLevel(this.level);
+      if (x <= 65 && y >= 20 && y <= 82) this.enterLevelSelect();
+      else if (x >= 45 && x <= 220 && y > this.h / 2 + 40 && y < this.h / 2 + 100) this.startLevel(this.level);
       else if (x >= 230 && x <= 345 && y > this.h / 2 + 40 && y < this.h / 2 + 100) this.enterLevelSelect();
       return;
     }

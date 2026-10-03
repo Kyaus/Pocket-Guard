@@ -51,12 +51,12 @@ test('副本内常驻退出按钮，退出不会继续战斗', () => {
   game.startWave();
   game.spawn();
   assert.equal(game.state, 'battle');
-  game.touch(330, 50);
+  game.touch(30, 50);
   assert.equal(game.state, 'levelSelect');
   assert.equal(game.enemies.length, 0);
   game.touch(100, 200);
   assert.equal(game.state, 'ready');
-  game.touch(330, 50);
+  game.touch(30, 50);
   assert.equal(game.state, 'levelSelect');
 });
 
