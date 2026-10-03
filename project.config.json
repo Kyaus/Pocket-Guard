@@ -1,0 +1,27 @@
+{
+  "description": "口袋守卫：单人塔防原型",
+  "compileType": "game",
+  "appid": "wxa08cb84d31d31168",
+  "projectname": "pocket-guardian",
+  "miniprogramRoot": "",
+  "setting": {
+    "es6": true,
+    "minified": false,
+    "urlCheck": true,
+    "babelSetting": {
+      "ignore": [],
+      "disablePlugins": [],
+      "outputPath": ""
+    }
+  },
+  "libVersion": "3.17.3",
+  "packOptions": {
+    "ignore": [],
+    "include": []
+  },
+  "condition": {},
+  "editorSetting": {
+    "tabIndent": "insertSpaces",
+    "tabSize": 2
+  }
+}
