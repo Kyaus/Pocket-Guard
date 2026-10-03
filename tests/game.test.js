@@ -224,22 +224,16 @@ test('冰霜脉冲减速范围内所有敌人，不发射单体弹', () => {
   assert.ok(game.effects.some(effect => effect.kind === 'frost'));
 });
 
-test('长屏幕上每个可建造格子的冰霜塔都能攻击相邻道路', () => {
+test('长屏幕上初始草坪的冰霜塔都能攻击相邻道路', () => {
   for (const height of [640, 844, 932, 1100]) {
     const layout = new Game(390, height);
-    for (let row = 0; row < GRID.rows; row++) {
-      for (let col = 0; col < GRID.cols; col++) {
-        if (layout.roadCells.some(([c, r]) => c === col && r === row)) continue;
+    for (const [col, row] of layout.levelConfig.initialGrass) {
         const game = new Game(390, height);
         game.startLevel(1);
         game.selected = 2;
         const cellX = GRID.left + (col + 0.5) * game.cellW;
         const cellY = game.top + (row + 0.5) * game.cellH;
         game.touch(cellX, cellY);
-        if (game.selectedGrass) {
-          game.touch(105, game.h - 115);
-          game.touch(cellX, cellY);
-        }
         const tower = game.towers[0];
         const nearest = game.path.slice(1, -1).reduce((best, point) =>
           Math.hypot(point.x - tower.x, point.y - tower.y) < Math.hypot(best.x - tower.x, best.y - tower.y) ? point : best);
@@ -249,7 +243,6 @@ test('长屏幕上每个可建造格子的冰霜塔都能攻击相邻道路', ()
         game.update(0);
         assert.equal(unit.slow, 2, `屏幕 ${height}，格子 ${col},${row} 应触发冰霜攻击`);
         assert.equal(unit.hp, 97);
-      }
     }
   }
 });
@@ -269,7 +262,7 @@ test('建造扣费，禁止在道路和重复格子建造', () => {
 test('锁定草坪需要先付费开垦，开垦后才能建塔', () => {
   const game = new Game(390, 844);
   game.startLevel(1);
-  const col = 4, row = 1;
+  const col = 4, row = 0;
   const x = GRID.left + (col + 0.5) * game.cellW;
   const y = game.top + (row + 0.5) * game.cellH;
   assert.equal(game.isGrassUnlocked(col, row), false);

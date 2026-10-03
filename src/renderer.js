@@ -22,6 +22,11 @@ const UI = {
   blue: '#73a9c9',
   red: '#bd735f'
 };
+let GRASS_IMAGE = null;
+
+function setGrassImage(image) {
+  GRASS_IMAGE = image;
+}
 
 function panel(ctx, x, y, width, height, fill, radius = 12, stroke = PALETTE.ink) {
   const r = Math.min(radius, width / 2, height / 2);
@@ -150,24 +155,41 @@ function battlefield(ctx, game) {
   ctx.restore();
   for (let row = 0; row < GRID.rows; row++) {
     for (let col = 0; col < GRID.cols; col++) {
-      const x = GRID.left + (col + 0.5) * game.cellW;
-      const y = game.top + (row + 0.5) * game.cellH;
-      if (game.roadCells.some(([c, r]) => c === col && r === row)) {
+      const road = game.roadCells.some(([c, r]) => c === col && r === row);
+      const slot = road ? {
+        x: GRID.left + (col + 0.5) * game.cellW,
+        y: game.top + (row + 0.5) * game.cellH
+      } : game.slotPosition(col, row);
+      const x = slot.x;
+      const y = slot.y;
+      if (road) {
         panel(ctx, x - game.cellW * 0.16, y - 3, game.cellW * 0.32, 6, '#dfbd7e', 3, null);
       } else {
         const unlocked = game.isGrassUnlocked(col, row);
         const selected = game.selectedGrass && game.selectedGrass.col === col && game.selectedGrass.row === row;
-        panel(ctx, x - game.cellW / 2 + 2, y - game.cellH / 2 + 2,
-          game.cellW - 4, game.cellH - 4,
-          unlocked ? ((row + col) % 2 ? '#83c878' : '#94d181') : '#527f5b',
-          9, selected ? '#ffe38d' : unlocked ? '#6eae69' : '#3c6850');
+        if (GRASS_IMAGE) {
+          ctx.save();
+          ctx.globalAlpha = unlocked ? 0.92 : 0.42;
+          ctx.drawImage(GRASS_IMAGE, x - game.cellW * 0.48, y - game.cellH * 0.43,
+            game.cellW * 0.96, game.cellH * 0.86);
+          ctx.restore();
+        } else {
+          panel(ctx, x - game.cellW / 2 + 2, y - game.cellH / 2 + 2,
+            game.cellW - 4, game.cellH - 4,
+            unlocked ? ((row + col) % 2 ? '#83c878' : '#94d181') : '#527f5b',
+            9, selected ? '#ffe38d' : unlocked ? '#6eae69' : '#3c6850');
+        }
+        if (selected) {
+          ctx.strokeStyle = '#ffe38d'; ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.arc(x, y, Math.min(game.cellW, game.cellH) * 0.42, 0, Math.PI * 2);
+          ctx.stroke();
+        }
         if (!unlocked) {
-          circle(ctx, x, y - 2, Math.min(10, game.cellH * 0.22), '#355947');
-          label(ctx, '锁', x, y + 3, Math.min(11, game.cellH * 0.28), '#e9d58e');
-          label(ctx, game.grassUnlockCost + '金', x, y + Math.min(21, game.cellH * 0.42), 8, '#ffe39c');
+          uiPanel(ctx, x - 16, y + game.cellH * 0.22, 32, 14, '#315947', 6);
+          label(ctx, game.grassUnlockCost + '金', x, y + game.cellH * 0.22 + 10, 8, '#ffe39c');
         } else if (!game.towers.some(t => t.col === col && t.row === row)) {
-          label(ctx, '+', x, y + Math.min(7, game.cellH * 0.2), Math.min(18, game.cellH * 0.48), '#719752');
-          if ((row * GRID.cols + col) % 7 === 0) drawTree(ctx, x + game.cellW * 0.25, y + game.cellH * 0.2, 0.11, '#3d8d58');
+          circle(ctx, x, y, Math.min(8, game.cellH * 0.18), 'rgba(245,226,144,0.55)', false);
         }
         // 花草位置由格子索引决定，避免每帧随机造成闪烁。
         circle(ctx, x + game.cellW * 0.38, y + game.cellH * 0.36, 1.5,
@@ -636,4 +658,4 @@ function drawGame(ctx, game) {
   ctx.restore();
 }
 
-module.exports = { drawGame, PALETTE };
+module.exports = { drawGame, setGrassImage, PALETTE };

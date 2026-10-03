@@ -49,6 +49,14 @@ class Game {
     this.path = createPath(this.roadCells, GRID, this.top, this.cellH);
     this.pathLength = pathLength(this.path);
   }
+  slotPosition(col, row) {
+    const offsetX = (((col * 7 + row * 11 + this.level * 5) % 9) - 4) * 1.35;
+    const offsetY = (((col * 13 + row * 3 + this.level * 7) % 9) - 4) * 1.5;
+    return {
+      x: GRID.left + (col + 0.5) * this.cellW + offsetX,
+      y: this.top + (row + 0.5) * this.cellH + offsetY
+    };
+  }
   startLevel(levelId) {
     const id = Math.max(1, Math.min(LEVELS.length, Number(levelId) || 1));
     if (id > this.unlockedLevel) {
@@ -377,8 +385,9 @@ class Game {
     const type = TYPES[this.selected];
     if (this.coins < type.cost) { this.message('金币不足，击败敌人可获得金币'); return; }
     this.coins -= type.cost;
-    this.towers.push({ col, row, x: GRID.left + (col + 0.5) * this.cellW,
-      y: this.top + (row + 0.5) * this.cellH,
+    const slot = this.slotPosition(col, row);
+    this.towers.push({ col, row, x: slot.x,
+      y: slot.y,
       type: this.selected, level: 1, invested: type.cost, cooldown: 0 });
   }
   draw(ctx) {
