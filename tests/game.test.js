@@ -5,11 +5,13 @@ const { advanceEnemy } = require('../src/path');
 const { attackPose, ATTACK_DURATION } = require('../src/animation');
 const { towerStats } = require('../src/tower-stats');
 const { GRID } = require('../src/levels');
+const { createPath } = require('../src/path');
+const { homeButtonLayout } = require('../src/home');
 
 test('登录后进入主页面，点击守护小镇入口进入关卡选择', () => {
   const game = new Game(390, 844);
   assert.equal(game.state, 'menu');
-  game.touch(195, 470);
+  game.touch(195, 380);
   assert.equal(game.state, 'levelSelect');
   game.touch(100, 150);
   assert.equal(game.state, 'ready');
@@ -31,6 +33,41 @@ test('每关有独立地图和递增难度，地图提供更多可建造位置',
   assert.equal(new Set(maps).size, 4);
   assert.ok(openSlots.every(slots => slots >= 20));
   assert.deepEqual(enemyHp, [1, 1.18, 1.4, 1.72]);
+});
+
+test('主页面入口可扩展，非副本功能进入独立预览页', () => {
+  const game = new Game(390, 844);
+  const summon = homeButtonLayout(844).find(button => button.id === 'summon');
+  game.touch(summon.x + 20, summon.y + 20);
+  assert.equal(game.state, 'feature');
+  assert.equal(game.feature, 'summon');
+  game.touch(195, 600);
+  assert.equal(game.state, 'menu');
+});
+
+test('副本内常驻退出按钮，退出不会继续战斗', () => {
+  const game = new Game(390, 844);
+  game.startLevel(1);
+  game.startWave();
+  game.spawn();
+  assert.equal(game.state, 'battle');
+  game.touch(330, 50);
+  assert.equal(game.state, 'levelSelect');
+  assert.equal(game.enemies.length, 0);
+  game.touch(100, 200);
+  assert.equal(game.state, 'ready');
+  game.touch(330, 50);
+  assert.equal(game.state, 'levelSelect');
+});
+
+test('道路转弯使用平滑采样，圆角路径仍保持入口和出口', () => {
+  const game = new Game(390, 844);
+  game.startLevel(1);
+  const path = createPath(game.roadCells, GRID, game.top, game.cellH);
+  assert.ok(path.length > game.roadCells.length * 3);
+  assert.equal(path[0].y, game.top - 24);
+  assert.equal(path[path.length - 1].y, game.top + GRID.rows * game.cellH + 24);
+  assert.ok(path.some(point => point.x !== Math.round(point.x)));
 });
 
 test('点击守卫打开管理面板，升级扣费、满级不再扣费，出售返还累计投入', () => {

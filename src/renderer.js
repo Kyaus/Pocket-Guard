@@ -2,6 +2,7 @@ const { TYPES } = require('./config');
 const { drawGuardian, drawMonster } = require('./characters');
 const { MAX_LEVEL, upgradeCost, sellValue, towerStats } = require('./tower-stats');
 const { GRID, LEVELS } = require('./levels');
+const { homeButtonLayout } = require('./home');
 
 // 卡通视觉使用 Canvas 路径绘制，图形源码可直接修改，无外部素材依赖。
 const PALETTE = {
@@ -193,20 +194,57 @@ function drawTowerPanel(ctx, game) {
 function drawMainMenu(ctx, game) {
   ctx.fillStyle = '#edf4d9';
   ctx.fillRect(0, 0, game.w, game.h);
-  label(ctx, '口袋守卫', 195, 94, 38, PALETTE.ink);
-  label(ctx, '森林小镇 · 卡通塔防冒险', 195, 123, 15, PALETTE.muted);
-  panel(ctx, 28, 155, 334, 260, '#fff8df', 28);
-  circle(ctx, 195, 218, 60, '#cfe8a7');
-  drawGuardian(ctx, 170, 267, 0, false, game.time, Infinity, -0.55, 2);
-  drawGuardian(ctx, 220, 267, 2, false, game.time, Infinity, -0.55, 1);
-  label(ctx, '守护小镇', 195, 345, 28, PALETTE.ink);
-  label(ctx, '集结守卫，击退来袭的小怪兽', 195, 373, 14, PALETTE.muted);
-  const buttonY = Math.min(game.h - 180, 440);
-  panel(ctx, 47, buttonY + 6, 296, 70, PALETTE.shadow, 18);
-  panel(ctx, 47, buttonY, 296, 70, PALETTE.green, 18);
-  label(ctx, '进入关卡', 195, buttonY + 44, 22, '#fffbea');
-  label(ctx, `已解锁 ${game.unlockedLevel}/${LEVELS.length} 个关卡`, 195, buttonY + 112, 14, '#8b9a72');
-  label(ctx, '本地进度自动保存', 195, buttonY + 138, 12, PALETTE.muted);
+  panel(ctx, 14, 14, 362, 96, PALETTE.cream, 18);
+  circle(ctx, 58, 62, 31, '#cfe8a7');
+  drawGuardian(ctx, 58, 72, game.profile.avatarType || 2, false, game.time, Infinity, -0.55, 3, 0.5);
+  label(ctx, game.profile.name || '守卫学徒', 101, 48, 18, PALETTE.ink, 'left');
+  label(ctx, 'Lv.' + (game.profile.level || 1) + '  小镇守护者', 101, 72, 12, PALETTE.muted, 'left');
+  panel(ctx, 235, 32, 62, 27, '#ffedaf', 10);
+  label(ctx, '金币 ' + game.wallet.coins, 266, 51, 11, '#8c6c28');
+  panel(ctx, 302, 32, 62, 27, '#d7edf5', 10);
+  label(ctx, '钻石 ' + game.wallet.gems, 333, 51, 11, '#547690');
+  label(ctx, '今日任务：守住一波敌人', 235, 83, 11, PALETTE.muted, 'left');
+  panel(ctx, 14, 126, 362, 194, '#fff8df', 24);
+  circle(ctx, 195, 198, 51, '#cfe8a7');
+  drawGuardian(ctx, 171, 246, 0, false, game.time, Infinity, -0.55, 2);
+  drawGuardian(ctx, 219, 246, 2, false, game.time, Infinity, -0.55, 1);
+  label(ctx, '口袋守卫', 195, 283, 24, PALETTE.ink);
+  label(ctx, '集结守卫，击退来袭的小怪兽', 195, 304, 12, PALETTE.muted);
+  homeButtonLayout(game.h).forEach(button => {
+    const selected = button.id === 'guardian';
+    panel(ctx, button.x, button.y + 4, button.width, button.height, '#a7b78d', 15, null);
+    panel(ctx, button.x, button.y, button.width, button.height, button.color, 15, selected ? PALETTE.ink : '#a0a77f');
+    circle(ctx, button.x + 32, button.y + button.height / 2, selected ? 25 : 22, '#fff8df');
+    label(ctx, button.icon, button.x + 32, button.y + button.height / 2 + 7, selected ? 24 : 20, PALETTE.ink);
+    label(ctx, button.name, button.x + 66, button.y + button.height / 2 - 2, selected ? 18 : 16, PALETTE.ink, 'left');
+    label(ctx, button.subtitle, button.x + 66, button.y + button.height / 2 + 19, 11, '#63735b', 'left');
+    if (selected) label(ctx, '›', button.x + button.width - 24, button.y + button.height / 2 + 8, 28, PALETTE.ink);
+  });
+  panel(ctx, 14, game.h - 62, 362, 44, '#d9e6c3', 14);
+  label(ctx, '大厅', 195, game.h - 33, 15, PALETTE.ink);
+}
+
+function drawFeature(ctx, game) {
+  ctx.fillStyle = '#edf4d9';
+  ctx.fillRect(0, 0, game.w, game.h);
+  panel(ctx, 14, 18, 362, 66, PALETTE.cream, 18);
+  label(ctx, '‹', 35, 61, 30, PALETTE.ink);
+  label(ctx, '功能预览', 195, 57, 24, PALETTE.ink);
+  panel(ctx, 26, 130, 338, 390, '#fff8df', 24);
+  circle(ctx, 195, 222, 55, '#cfe8a7');
+  const title = { summon: '英雄抽取', expedition: '远征', shop: '商城', warehouse: '仓库' }[game.feature] || '功能';
+  const desc = {
+    summon: '收集不同职业的英雄，组成你的守卫队伍。',
+    expedition: '派遣闲置英雄远征，离线也能带回奖励。',
+    shop: '未来可购买外观、资源和限时礼包。',
+    warehouse: '查看已获得的英雄、装备和装饰。'
+  }[game.feature] || '更多城镇功能正在准备中。';
+  label(ctx, title, 195, 315, 28, PALETTE.ink);
+  label(ctx, desc, 195, 350, 14, PALETTE.muted);
+  label(ctx, '即将开放', 195, 410, 22, '#9e8960');
+  label(ctx, '入口和资源结构已经预留，后续可以接入正式内容。', 195, 440, 12, PALETTE.muted);
+  panel(ctx, 64, 566, 262, 55, PALETTE.green, 16);
+  label(ctx, '返回大厅', 195, 601, 18, '#fffbea');
 }
 
 function drawLevelSelect(ctx, game) {
@@ -236,6 +274,8 @@ function drawOverlay(ctx, game) {
   const center = game.h / 2;
   ctx.fillStyle = 'rgba(41,65,47,0.65)';
   ctx.fillRect(0, 0, game.w, game.h);
+  panel(ctx, 290, 22, 82, 34, '#fff8df', 10);
+  label(ctx, '退出副本', 331, 45, 12, PALETTE.ink);
   if (game.state === 'upgrade') {
     panel(ctx, 22, center - 188, 346, 350, PALETTE.cream, 22);
     label(ctx, '防守成功！', 195, center - 148, 27);
@@ -271,13 +311,19 @@ function drawGame(ctx, game) {
     drawLevelSelect(ctx, game);
     return;
   }
+  if (game.state === 'feature') {
+    drawFeature(ctx, game);
+    return;
+  }
   ctx.save();
   ctx.fillStyle = '#edf4d9';
   ctx.fillRect(0, 0, game.w, game.h);
   panel(ctx, 14, 17, 362, 62, PALETTE.cream, 18);
   label(ctx, '口袋守卫', 31, 45, 25, PALETTE.ink, 'left');
   label(ctx, `${game.levelConfig.name} · ${game.levelConfig.subtitle}`, 32, 66, 11, PALETTE.muted, 'left');
-  label(ctx, '最佳 ' + game.best + ' 波', 356, 51, 13, '#869155', 'right');
+  label(ctx, '最佳 ' + game.best + ' 波', 280, 51, 12, '#869155', 'right');
+  panel(ctx, 292, 29, 76, 34, '#d9e6c3', 10);
+  label(ctx, '退出副本', 330, 51, 11, PALETTE.ink);
   ['生命 ' + game.hp, '金币 ' + game.coins,
     '波次 ' + game.wave + '/' + game.levelConfig.waves].forEach((value, index) => {
     panel(ctx, 16 + index * 122, 91, 114, 33, ['#ffe0d6', '#ffedaf', '#dcebc7'][index], 12);

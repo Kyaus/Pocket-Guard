@@ -7,9 +7,34 @@ function createPath(roadCells, layout = GRID, top = layout.top, cellHeight = lay
     x: layout.left + (col + 0.5) * cellWidth,
     y: top + (row + 0.5) * cellHeight
   });
-  const points = roadCells.map(center);
-  return [{ x: points[0].x, y: top - 18 }, ...points,
-    { x: points[points.length - 1].x, y: top + layout.rows * cellHeight + 20 }];
+  const anchors = roadCells.map(center);
+  const first = { x: anchors[0].x, y: top - 24 };
+  const last = { x: anchors[anchors.length - 1].x, y: top + layout.rows * cellHeight + 24 };
+  const controlPoints = [first, ...anchors, last];
+  const points = [];
+  const sampleCount = 6;
+  // Catmull-Rom 采样把直角路口变成圆润的连续道路，同时保留每个地图的原始路径顺序。
+  for (let i = 0; i < controlPoints.length - 1; i++) {
+    const p0 = controlPoints[Math.max(0, i - 1)];
+    const p1 = controlPoints[i];
+    const p2 = controlPoints[i + 1];
+    const p3 = controlPoints[Math.min(controlPoints.length - 1, i + 2)];
+    for (let step = 0; step < sampleCount; step++) {
+      const t = step / sampleCount;
+      const t2 = t * t;
+      const t3 = t2 * t;
+      points.push({
+        x: 0.5 * ((2 * p1.x) + (-p0.x + p2.x) * t +
+          (2 * p0.x - 5 * p1.x + 4 * p2.x - p3.x) * t2 +
+          (-p0.x + 3 * p1.x - 3 * p2.x + p3.x) * t3),
+        y: 0.5 * ((2 * p1.y) + (-p0.y + p2.y) * t +
+          (2 * p0.y - 5 * p1.y + 4 * p2.y - p3.y) * t2 +
+          (-p0.y + 3 * p1.y - 3 * p2.y + p3.y) * t3)
+      });
+    }
+  }
+  points.push(last);
+  return points;
 }
 
 function pathLength(points) {

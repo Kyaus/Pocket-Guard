@@ -3,6 +3,7 @@ const { drawGame } = require('./renderer');
 const { createPath, pathLength, advanceEnemy } = require('./path');
 const { MAX_LEVEL, upgradeCost, sellValue, towerStats } = require('./tower-stats');
 const { GRID, LEVELS, getLevel } = require('./levels');
+const { hitHomeButton } = require('./home');
 
 // 纯客户端游戏控制器，不直接调用微信 API；存储由入口注入。
 class Game {
@@ -11,6 +12,8 @@ class Game {
     this.best = storage.readBest ? storage.readBest() : 0;
     this.unlockedLevel = Math.max(1, Math.min(LEVELS.length,
       Number(storage.readUnlockedLevel ? storage.readUnlockedLevel() : 1) || 1));
+    this.profile = storage.readProfile ? storage.readProfile() : { name: '守卫学徒', level: 1, avatarType: 2 };
+    this.wallet = storage.readWallet ? storage.readWallet() : { coins: 1200, gems: 20 };
     this.level = 1;
     this.reset();
   }
@@ -69,6 +72,15 @@ class Game {
   }
   enterLevelSelect() {
     this.state = 'levelSelect';
+    this.selectedTower = null;
+    this.enemies = [];
+    this.projectiles = [];
+    this.effects = [];
+    this.pending = 0;
+  }
+  openHomeFeature(feature) {
+    this.feature = feature;
+    this.state = 'feature';
     this.selectedTower = null;
   }
   message(text) { this.notice = text; this.noticeTime = 2.5; }
@@ -228,8 +240,16 @@ class Game {
   }
   touch(x, y) {
     if (this.state === 'menu') {
-      const buttonY = Math.min(this.h - 180, 440);
-      if (x >= 35 && x <= 355 && y >= buttonY && y <= buttonY + 78) this.enterLevelSelect();
+      const button = hitHomeButton(x, y, this.h);
+      if (button) {
+        if (button.id === 'guardian') this.enterLevelSelect();
+        else this.openHomeFeature(button.id);
+      }
+      if (y >= this.h - 70) this.returnToMenu();
+      return;
+    }
+    if (this.state === 'feature') {
+      if (y >= 540 || (x <= 75 && y >= 20 && y <= 82) || (x >= 300 && y >= 20 && y <= 82)) this.reset();
       return;
     }
     if (this.state === 'levelSelect') {
@@ -244,6 +264,11 @@ class Game {
         y >= startY + row * 124 && y <= startY + row * 124 + cardHeight && id <= LEVELS.length) {
         this.startLevel(id);
       }
+      return;
+    }
+    if ((this.state === 'ready' || this.state === 'battle' || this.state === 'upgrade') &&
+      x >= 300 && x <= 375 && y >= 20 && y <= 82) {
+      this.enterLevelSelect();
       return;
     }
     if (this.state === 'win' || this.state === 'lose') {
